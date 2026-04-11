@@ -34,13 +34,11 @@ MODEL_ID = "google/gemma-4-E4B-it"
 LOCAL_DIR = "/workspace/models/gemma-4-E4B-it"
 SSH_KEY = os.path.expanduser("~/.ssh/id_ed25519")
 
-# GPU types to try in order (cheapest to most expensive).
+# GPU types to try in order.
 # RunPod will use the first type available in the target datacenter.
 GPU_TYPES = [
-    "NVIDIA GeForce RTX 4090",
-    "NVIDIA GeForce RTX 3090",
-    "NVIDIA A40",
-    "NVIDIA A100-SXM4-80GB",
+    "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+    "NVIDIA RTX PRO 6000 Blackwell Workstation Edition",
 ]
 
 # Network volumes — one per datacenter
