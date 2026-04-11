@@ -1,4 +1,7 @@
-ARG BASE_IMAGE=nvcr.io/nvidia/tritonserver:26.03-vllm-python-py3
+# 25.09 is the latest Triton release built against CUDA 12.x (driver 525+).
+# 26.xx requires driver 595.45+ (CUDA 13.0). Use 25.09 for hardware capped at driver 580.
+# Override at build time: docker build --build-arg BASE_IMAGE=nvcr.io/nvidia/tritonserver:26.03-vllm-python-py3 .
+ARG BASE_IMAGE=nvcr.io/nvidia/tritonserver:25.09-vllm-python-py3
 
 FROM ${BASE_IMAGE}
 
