@@ -8,7 +8,7 @@ FROM ${BASE_IMAGE}
 ENV DEBIAN_FRONTEND=noninteractive \
     PIP_BREAK_SYSTEM_PACKAGES=1
 
-RUN pip3 install --no-cache-dir runpod httpx
+RUN pip3 install --no-cache-dir runpod httpx "transformers>=4.51.0"
 
 WORKDIR /app
 COPY generate_config.py .
