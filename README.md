@@ -19,19 +19,21 @@ Each job receives an OpenAI-style `messages` array, applies the model's chat tem
 
 ---
 
-## Base image
+## Target hardware
 
-| Tag | CUDA | Min driver | Use when |
-|-----|------|------------|----------|
-| `25.09-vllm-python-py3` | 12.x | 525+ | Default — works on most RunPod GPU workers (driver 580, etc.) |
-| `26.03-vllm-python-py3` | 13.0 | 595.45+ | Bleeding edge — only if your worker has driver 595.45 or later |
+**NVIDIA RTX Pro 6000** (Blackwell) — requires driver 595.45+ / CUDA 13.0.
 
-The default build targets `25.09`. Override at build time if you have a newer driver:
+Default base image:
+```
+nvcr.io/nvidia/tritonserver:26.03-vllm-python-py3
+```
+
+For older hardware (driver < 595.45), override at build time with a 25.xx tag:
 
 ```bash
 docker build \
-  --build-arg BASE_IMAGE=nvcr.io/nvidia/tritonserver:26.03-vllm-python-py3 \
-  -t gwesterrunpod/rp-tritonserver:26.03-vllm-python-py3 .
+  --build-arg BASE_IMAGE=nvcr.io/nvidia/tritonserver:25.09-vllm-python-py3 \
+  -t gwesterrunpod/rp-tritonserver:25.09-vllm-python-py3 .
 ```
 
 Full list of available tags: [NVIDIA NGC](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/tritonserver).
