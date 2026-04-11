@@ -1,7 +1,7 @@
-# Target hardware: NVIDIA RTX Pro 6000 (Blackwell, driver 595.45+, CUDA 13.0).
-# For older hardware (driver < 595.45), override with a 25.xx tag:
-#   docker build --build-arg BASE_IMAGE=nvcr.io/nvidia/tritonserver:25.09-vllm-python-py3 .
-ARG BASE_IMAGE=nvcr.io/nvidia/tritonserver:26.03-vllm-python-py3
+# Default targets CUDA 12.x (driver 525+) for broadest RunPod compatibility.
+# For CUDA 13.0 hardware (driver 595.45+, e.g. RTX Pro 6000), override at build time:
+#   docker build --build-arg BASE_IMAGE=nvcr.io/nvidia/tritonserver:26.03-vllm-python-py3 .
+ARG BASE_IMAGE=nvcr.io/nvidia/tritonserver:25.09-vllm-python-py3
 
 FROM ${BASE_IMAGE}
 
