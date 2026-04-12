@@ -81,7 +81,6 @@ instance_group [
         "max_model_len": max_model_len,
         "gpu_memory_utilization": gpu_memory_util,
         "max_num_seqs": max_num_seqs,
-        "disable_log_requests": True,
         "enforce_eager": False,
     }
     (version_dir / "model.json").write_text(json.dumps(vllm_config, indent=2))
