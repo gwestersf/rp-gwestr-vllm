@@ -1,177 +1,157 @@
-# rp-tritonserver
+# rp-gwestr-vllm
 
-A RunPod serverless worker that serves large language models via NVIDIA Triton Inference Server with the vLLM backend. Exposes an OpenAI-compatible chat completions interface. Model weights are loaded at runtime from a RunPod network volume — nothing is baked into the image.
+RunPod serverless endpoint using [vLLM](https://github.com/vllm-project/vllm) to serve any Hugging Face model with an OpenAI-compatible chat API.
 
-> Generated with [Claude Code](https://claude.ai/claude-code)
+Designed to scale from 4B → 8B → 26B → 100B+ models by adjusting env vars only — no code changes, no image rebuild.
 
 ---
 
 ## How it works
 
-At container startup:
-
-1. `generate_config.py` writes a Triton model repository to disk (`/model_repo` by default) using environment variables — `config.pbtxt` for the Triton backend config and `model.json` for the vLLM engine config.
-2. `tritonserver` is launched pointing at that repository.
-3. The model tokenizer is loaded from the network volume concurrently while Triton warms up.
-4. Once Triton's health endpoint responds ready, the RunPod handler is registered and the worker begins accepting jobs.
-
-Each job receives an OpenAI-style `messages` array, applies the model's chat template, sends the prompt to Triton's generate endpoint, and returns a response in OpenAI chat completions format. Streaming is supported via RunPod's async generator protocol.
-
----
-
-## Base image
-
-Default: `nvcr.io/nvidia/tritonserver:25.09-vllm-python-py3` (CUDA 12.x, driver 525+).
-
-This covers most RunPod GPU workers (driver 580 etc.) and also runs fine on newer hardware like the RTX Pro 6000 — NVIDIA drivers are backwards compatible with older CUDA images.
-
-For CUDA 13.0 hardware (driver 595.45+), override at build time:
-
-```bash
-docker build \
-  --build-arg BASE_IMAGE=nvcr.io/nvidia/tritonserver:26.03-vllm-python-py3 \
-  -t gwesterrunpod/rp-tritonserver:26.03-vllm-python-py3 .
-```
-
-Full list of available tags: [NVIDIA NGC](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/tritonserver).
-
----
-
-## Project structure
-
-```
-rp-tritonserver/
-├── Dockerfile            # Extends the Triton vLLM image, adds runpod + httpx
-├── generate_config.py    # Writes Triton model repo from env vars at startup
-├── handler.py            # RunPod entry point — starts Triton, serves requests
-├── pyproject.toml        # Project metadata and pytest config
-└── tests/
-    ├── test_generate_config.py
-    └── test_handler.py
-```
+On worker startup, `handler.py`:
+1. Launches `vllm serve` pointing at `MODEL_PATH`
+2. Waits for `/health` to return 200
+3. Forwards RunPod jobs to `/v1/chat/completions`
 
 ---
 
 ## Environment variables
 
-All configuration is done via environment variables set in the RunPod endpoint UI. No values are hardcoded in the image.
+Set these at the RunPod endpoint level (or via `docker run -e`). The image has no hardcoded model.
 
 | Variable | Default | Description |
-|----------|---------|-------------|
-| `MODEL_PATH` | **required** | Absolute path to model weights on the network volume (e.g. `/runpod-volume/models/gemma-4-E4B-it`) |
-| `MODEL_NAME` | `model` | Triton model name — used as the directory name inside the model repo and in API paths |
-| `TRITON_MODEL_REPO` | `/model_repo` | Where the Triton model repository is generated at startup |
-| `TRITON_HTTP_PORT` | `8000` | Port Triton listens on for HTTP |
-| `TENSOR_PARALLEL_SIZE` | `1` | Number of GPUs for tensor parallelism |
-| `MAX_MODEL_LEN` | `8192` | Maximum context length (tokens) |
-| `GPU_MEMORY_UTILIZATION` | `0.90` | Fraction of GPU memory vLLM may use |
-| `MAX_NUM_SEQS` | `4` | Maximum number of sequences processed concurrently |
-| `TRITON_STARTUP_TIMEOUT` | `1800` | Seconds to wait for Triton to become ready (large models can take several minutes to load) |
+|---|---|---|
+| `MODEL_PATH` | **required** | Path to model weights (e.g. `/runpod-volume/models/gemma-4-E4B-it`) |
+| `TENSOR_PARALLEL_SIZE` | `1` | GPUs per worker — set to `2` for 26B, `4`+ for 70B+/100B+ |
+| `MAX_MODEL_LEN` | `8192` | Max context window in tokens. Reduce if OOM on startup |
+| `GPU_MEMORY_UTILIZATION` | `0.90` | Fraction of VRAM vLLM may use for KV cache |
+| `MAX_NUM_SEQS` | `4` | Max concurrent requests per worker |
+| `VLLM_PORT` | `8000` | Internal port (no need to change) |
+| `TRITON_STARTUP_TIMEOUT` | `1800` | Seconds to wait for vLLM ready — increase for large models |
+
+### Sizing guide
+
+| Model size | VRAM (BF16) | `TENSOR_PARALLEL_SIZE` | GPU |
+|---|---|---|---|
+| 4B (Gemma 4B) | ~16 GB | 1 | RTX PRO 4000 (24 GB) |
+| 8B | ~16 GB | 1 | RTX PRO 4000 (24 GB) |
+| 26B | ~52 GB | 2 | 2× RTX PRO 6000 (48 GB each) |
+| 70B | ~140 GB | 4 | 4× A100 80 GB |
+| 100B+ MoE | varies | 4–8 | 4–8× H100/A100 |
+
+---
+
+## Running locally
+
+### Requirements
+
+- NVIDIA driver **595.45+** (RTX PRO 4000/6000 Blackwell series)
+- Docker + [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
+
+### RTX PRO 4000 Blackwell (24 GB VRAM)
+
+```bash
+docker run --rm --gpus all \
+  -v /path/to/model:/model:ro \
+  -p 8000:8000 \
+  -e MODEL_PATH=/model \
+  -e MAX_MODEL_LEN=4096 \
+  -e GPU_MEMORY_UTILIZATION=0.90 \
+  -e MAX_NUM_SEQS=2 \
+  gwesterrunpod/rp-gwestr-vllm:latest
+```
+
+### RTX PRO 6000 Blackwell (48 GB VRAM) — same driver, larger limits
+
+```bash
+docker run --rm --gpus all \
+  -v /path/to/model:/model:ro \
+  -p 8000:8000 \
+  -e MODEL_PATH=/model \
+  -e MAX_MODEL_LEN=8192 \
+  -e GPU_MEMORY_UTILIZATION=0.92 \
+  -e MAX_NUM_SEQS=8 \
+  gwesterrunpod/rp-gwestr-vllm:latest
+```
+
+For a 26B model across **2× RTX PRO 6000** on the same host:
+
+```bash
+docker run --rm --gpus all \
+  -v /path/to/26b-model:/model:ro \
+  -p 8000:8000 \
+  -e MODEL_PATH=/model \
+  -e TENSOR_PARALLEL_SIZE=2 \
+  -e MAX_MODEL_LEN=8192 \
+  -e GPU_MEMORY_UTILIZATION=0.90 \
+  -e MAX_NUM_SEQS=4 \
+  gwesterrunpod/rp-gwestr-vllm:latest
+```
+
+### Test prompt
+
+```bash
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "model",
+    "messages": [{"role": "user", "content": "How does RunPod serverless work?"}]
+  }'
+```
 
 ---
 
 ## Build and push
 
 ```bash
-cd rp-tritonserver
-
-docker build -t gwesterrunpod/rp-tritonserver:26.03-vllm-python-py3 .
-docker push gwesterrunpod/rp-tritonserver:26.03-vllm-python-py3
-```
-
-To target a different base version, override the build arg:
-
-```bash
-docker build \
-  --build-arg BASE_IMAGE=nvcr.io/nvidia/tritonserver:26.03-vllm-python-py3 \
-  -t gwesterrunpod/rp-tritonserver:26.03-vllm-python-py3 .
+docker build -t gwesterrunpod/rp-gwestr-vllm:latest .
+docker push gwesterrunpod/rp-gwestr-vllm:latest
 ```
 
 ---
 
-## RunPod endpoint setup
+## RunPod deployment
 
-1. **Create a serverless endpoint** in the RunPod console.
-2. Set the container image to `gwesterrunpod/rp-tritonserver:26.03-vllm-python-py3`.
-3. **Attach your network volume** containing the model weights.
-4. Set at minimum the `MODEL_PATH` environment variable to the weights location on the volume.
-5. Tune `TENSOR_PARALLEL_SIZE`, `MAX_MODEL_LEN`, and `GPU_MEMORY_UTILIZATION` for your GPU type and model.
+1. Push image to Docker Hub
+2. Create a serverless endpoint:
+   - **Image:** `gwesterrunpod/rp-gwestr-vllm:latest`
+   - **Container disk:** 20 GB minimum
+   - **Network volume:** mount at `/runpod-volume` (50 GB+)
+3. Set env vars at the endpoint level — at minimum `MODEL_PATH`
+4. Pre-load model weights onto the network volume before starting the endpoint
 
 ---
 
 ## Request format
 
-Jobs are submitted to the RunPod endpoint with the following input schema:
-
 ```json
 {
-  "input": {
-    "messages": [
-      {"role": "system", "content": "You are a helpful assistant."},
-      {"role": "user", "content": "Explain transformer attention in one paragraph."}
-    ],
-    "max_tokens": 512,
-    "temperature": 0.7,
-    "top_p": 1.0,
-    "top_k": -1,
-    "stop": [],
-    "frequency_penalty": 0.0,
-    "presence_penalty": 0.0,
-    "stream": false
-  }
+  "messages": [{"role": "user", "content": "Your prompt here"}],
+  "max_tokens": 512,
+  "temperature": 0.7,
+  "top_p": 1.0,
+  "top_k": -1,
+  "stop": [],
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "stream": false
 }
 ```
 
-`messages` is the only required field. All generation parameters are optional and fall back to defaults.
+`messages` is the only required field.
 
 ### Non-streaming response
 
 ```json
 {
-  "choices": [
-    {
-      "message": {"role": "assistant", "content": "..."},
-      "finish_reason": "stop"
-    }
-  ]
+  "choices": [{"message": {"role": "assistant", "content": "..."}, "finish_reason": "stop"}]
 }
 ```
 
-### Streaming response
-
-Set `"stream": true`. The handler yields chunks in the same shape as OpenAI's streaming format:
+### Streaming response (`"stream": true`)
 
 ```json
-{"choices": [{"delta": {"role": "assistant", "content": "Attention"}, "finish_reason": null}]}
-{"choices": [{"delta": {"role": "assistant", "content": " is"}, "finish_reason": null}]}
-...
+{"choices": [{"delta": {"role": "assistant", "content": "Hello"}, "finish_reason": null}]}
+{"choices": [{"delta": {"role": "assistant", "content": " there"}, "finish_reason": null}]}
 {"choices": [{"delta": {"role": "assistant", "content": ""}, "finish_reason": "stop"}]}
 ```
-
----
-
-## Running tests
-
-Tests require no GPU, no Triton process, and no model weights. All external I/O is mocked.
-
-```bash
-pip install -e ".[test]"
-pytest
-```
-
-The suite covers:
-
-- `generate_config.py` — `config.pbtxt` content, `model.json` values, all env var overrides, defaults, custom model name, idempotency, missing `MODEL_PATH` error
-- `handler.py` — sampling parameter mapping, response shaping, chat template application, non-streaming and streaming handler paths, init sequencing, startup timeout
-
-One important implementation note reflected in the tests: the inner `generate()` async generator in the streaming path is **lazy** — it looks up `_stream` at iteration time, not when `handler()` returns. Tests that verify streaming behavior must iterate the generator while any relevant mock is still active.
-
----
-
-## Switching models
-
-Because all configuration is in environment variables, switching models requires only:
-
-1. Download the new model weights to your network volume.
-2. Update `MODEL_PATH` (and optionally `MODEL_NAME`, `MAX_MODEL_LEN`) in the RunPod endpoint config.
-3. Redeploy — no image rebuild needed.

@@ -5,7 +5,8 @@ FROM vllm/vllm-openai:v0.19.0
 ENV DEBIAN_FRONTEND=noninteractive \
     PIP_BREAK_SYSTEM_PACKAGES=1
 
-RUN pip3 install --no-cache-dir runpod httpx
+RUN pip3 install --no-cache-dir runpod httpx \
+ && pip3 install --no-cache-dir "transformers==5.5.3"
 
 WORKDIR /app
 COPY handler.py .
