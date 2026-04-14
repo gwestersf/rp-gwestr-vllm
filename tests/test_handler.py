@@ -1,13 +1,12 @@
-"""Tests for handler.py — no GPU, Triton process, or model weights required.
+"""Tests for handler.py — no GPU, vLLM process, or model weights required.
 
 All external I/O is mocked:
-  - Triton HTTP calls  → httpx patched
-  - tokenizer         → handler._tokenizer set directly
-  - subprocess        → patched so tritonserver never spawns
-  - generate_config   → patched so no filesystem writes
+  - vLLM HTTP calls  → httpx patched
+  - subprocess       → patched so vLLM server never spawns
 """
 
 import importlib
+import json
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch, call
@@ -23,30 +22,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 def h(monkeypatch):
     """Import handler with a clean environment and no side-effecting imports."""
     monkeypatch.setenv("MODEL_PATH", "/vol/models/gemma")
-    monkeypatch.setenv("MODEL_NAME", "model")
-    monkeypatch.setenv("TRITON_HTTP_PORT", "8000")
+    monkeypatch.setenv("VLLM_PORT", "8000")
     monkeypatch.setenv("TRITON_STARTUP_TIMEOUT", "1")
 
     sys.modules.pop("handler", None)
-    sys.modules.pop("generate_config", None)
-
     mod = importlib.import_module("handler")
-    mod._tokenizer = None
-    mod._triton_proc = None
+    mod._vllm_proc = None
     yield mod
-    mod._tokenizer = None
-    mod._triton_proc = None
+    mod._vllm_proc = None
     sys.modules.pop("handler", None)
-    sys.modules.pop("generate_config", None)
-
-
-@pytest.fixture()
-def tokenizer(h):
-    """Attach a mock tokenizer to the handler module."""
-    tok = MagicMock()
-    tok.apply_chat_template.return_value = "<bos><start_of_turn>user\nhello<end_of_turn>\n<start_of_turn>model\n"
-    h._tokenizer = tok
-    return tok
 
 
 # ── _sampling_params ──────────────────────────────────────────────────────────
@@ -57,10 +41,24 @@ class TestSamplingParams:
         assert p["max_tokens"] == 512
         assert p["temperature"] == 0.7
         assert p["top_p"] == 1.0
-        assert p["top_k"] == -1
-        assert p["stop"] == []
         assert p["frequency_penalty"] == 0.0
         assert p["presence_penalty"] == 0.0
+
+    def test_top_k_excluded_when_minus_one(self, h):
+        p = h._sampling_params({})
+        assert "top_k" not in p
+
+    def test_top_k_included_when_set(self, h):
+        p = h._sampling_params({"top_k": 50})
+        assert p["top_k"] == 50
+
+    def test_stop_excluded_when_absent(self, h):
+        p = h._sampling_params({})
+        assert "stop" not in p
+
+    def test_stop_included_when_set(self, h):
+        p = h._sampling_params({"stop": ["</s>", "\n\n"]})
+        assert p["stop"] == ["</s>", "\n\n"]
 
     def test_partial_override(self, h):
         p = h._sampling_params({"max_tokens": 1024, "temperature": 0.0})
@@ -68,17 +66,11 @@ class TestSamplingParams:
         assert p["temperature"] == 0.0
         assert p["top_p"] == 1.0  # default unchanged
 
-    def test_stop_sequences(self, h):
-        p = h._sampling_params({"stop": ["</s>", "\n\n"]})
-        assert p["stop"] == ["</s>", "\n\n"]
-
-    def test_all_fields_overridable(self, h):
+    def test_all_base_fields_overridable(self, h):
         overrides = {
             "max_tokens": 2048,
             "temperature": 1.2,
             "top_p": 0.95,
-            "top_k": 50,
-            "stop": ["<eos>"],
             "frequency_penalty": 0.5,
             "presence_penalty": 0.3,
         }
@@ -109,47 +101,29 @@ class TestChoice:
         assert c["choices"][0]["delta"]["content"] == ""
 
 
-# ── _apply_chat_template ──────────────────────────────────────────────────────
-
-class TestApplyChatTemplate:
-    def test_calls_apply_chat_template(self, h, tokenizer):
-        messages = [{"role": "user", "content": "hi"}]
-        h._apply_chat_template(messages)
-        tokenizer.apply_chat_template.assert_called_once_with(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True,
-        )
-
-    def test_returns_formatted_string(self, h, tokenizer):
-        result = h._apply_chat_template([{"role": "user", "content": "hi"}])
-        assert isinstance(result, str)
-        assert len(result) > 0
-
-    def test_passes_messages_unchanged(self, h, tokenizer):
-        messages = [
-            {"role": "system", "content": "You are helpful."},
-            {"role": "user", "content": "hello"},
-        ]
-        h._apply_chat_template(messages)
-        actual_messages = tokenizer.apply_chat_template.call_args[0][0]
-        assert actual_messages == messages
-
-
 # ── handler — non-streaming ───────────────────────────────────────────────────
 
 class TestHandlerNonStreaming:
-    async def test_missing_messages_returns_error(self, h, tokenizer):
+    async def test_missing_messages_returns_error(self, h):
         result = await h.handler({"input": {}})
         assert "error" in result
 
-    async def test_basic_response_shape(self, h, tokenizer):
+    async def test_empty_messages_returns_error(self, h):
+        result = await h.handler({"input": {"messages": []}})
+        assert "error" in result
+
+    async def test_none_messages_returns_error(self, h):
+        result = await h.handler({"input": {"messages": None}})
+        assert "error" in result
+
+    async def test_basic_response_shape(self, h):
         with patch("handler._query", new=AsyncMock(return_value="Hi there!")):
             result = await h.handler({"input": {"messages": [{"role": "user", "content": "hi"}]}})
         assert result["choices"][0]["message"]["content"] == "Hi there!"
         assert result["choices"][0]["finish_reason"] == "stop"
+        assert result["choices"][0]["message"]["role"] == "assistant"
 
-    async def test_sampling_params_forwarded(self, h, tokenizer):
+    async def test_sampling_params_forwarded(self, h):
         with patch("handler._query", new=AsyncMock(return_value="ok")) as mock_q:
             await h.handler({
                 "input": {
@@ -164,15 +138,12 @@ class TestHandlerNonStreaming:
         assert params["temperature"] == 0.1
         assert params["top_p"] == 0.9
 
-    async def test_prompt_from_chat_template(self, h, tokenizer):
+    async def test_messages_forwarded_to_query(self, h):
+        messages = [{"role": "user", "content": "hello"}]
         with patch("handler._query", new=AsyncMock(return_value="ok")) as mock_q:
-            await h.handler({"input": {"messages": [{"role": "user", "content": "hi"}]}})
-        prompt, _ = mock_q.call_args[0]
-        assert prompt == tokenizer.apply_chat_template.return_value
-
-    async def test_empty_messages_list_returns_error(self, h, tokenizer):
-        result = await h.handler({"input": {"messages": []}})
-        assert "error" in result
+            await h.handler({"input": {"messages": messages}})
+        forwarded_messages, _ = mock_q.call_args[0]
+        assert forwarded_messages == messages
 
 
 # ── handler — streaming ───────────────────────────────────────────────────────
@@ -184,8 +155,8 @@ class TestHandlerStreaming:
             chunks.append(chunk)
         return chunks
 
-    async def test_returns_async_generator(self, h, tokenizer):
-        async def fake_stream(prompt, params):
+    async def test_returns_async_generator(self, h):
+        async def fake_stream(messages, params):
             yield "hello"
 
         with patch("handler._stream", new=fake_stream):
@@ -195,14 +166,13 @@ class TestHandlerStreaming:
                     "stream": True,
                 }
             })
-        # Must be an async iterable
         import inspect
         assert inspect.isasyncgen(result)
 
-    async def test_chunk_content(self, h, tokenizer):
+    async def test_chunk_content(self, h):
         tokens = ["The", " sky", " is", " blue", "."]
 
-        async def fake_stream(prompt, params):
+        async def fake_stream(messages, params):
             for t in tokens:
                 yield t
 
@@ -213,15 +183,13 @@ class TestHandlerStreaming:
                     "stream": True,
                 }
             })
-            # Iterate inside the patch block: generate() is lazy and looks up
-            # _stream at iteration time, not at the point handler() is called.
             chunks = await self._collect(result)
 
-        content_chunks = chunks[:-1]  # last is the finish sentinel
+        content_chunks = chunks[:-1]  # last is finish sentinel
         assert [c["choices"][0]["delta"]["content"] for c in content_chunks] == tokens
 
-    async def test_final_chunk_has_finish_reason_stop(self, h, tokenizer):
-        async def fake_stream(prompt, params):
+    async def test_final_chunk_has_finish_reason_stop(self, h):
+        async def fake_stream(messages, params):
             yield "hello"
 
         with patch("handler._stream", new=fake_stream):
@@ -234,9 +202,10 @@ class TestHandlerStreaming:
             chunks = await self._collect(result)
 
         assert chunks[-1]["choices"][0]["finish_reason"] == "stop"
+        assert chunks[-1]["choices"][0]["delta"]["content"] == ""
 
-    async def test_intermediate_chunks_have_no_finish_reason(self, h, tokenizer):
-        async def fake_stream(prompt, params):
+    async def test_intermediate_chunks_have_no_finish_reason(self, h):
+        async def fake_stream(messages, params):
             for t in ["a", "b", "c"]:
                 yield t
 
@@ -252,10 +221,10 @@ class TestHandlerStreaming:
         for chunk in chunks[:-1]:
             assert chunk["choices"][0]["finish_reason"] is None
 
-    async def test_sampling_params_forwarded(self, h, tokenizer):
+    async def test_sampling_params_forwarded(self, h):
         received = {}
 
-        async def fake_stream(prompt, params):
+        async def fake_stream(messages, params):
             received.update(params)
             yield "ok"
 
@@ -274,56 +243,101 @@ class TestHandlerStreaming:
         assert received["temperature"] == 0.5
 
 
+# ── _start_vllm ───────────────────────────────────────────────────────────────
+
+class TestStartVllm:
+    def test_popen_called(self, h):
+        with patch("subprocess.Popen") as mock_popen:
+            h._start_vllm()
+        mock_popen.assert_called_once()
+
+    def test_model_path_in_cmd(self, h):
+        with patch("subprocess.Popen") as mock_popen:
+            h._start_vllm()
+        cmd = mock_popen.call_args[0][0]
+        assert "/vol/models/gemma" in cmd
+
+    def test_port_in_cmd(self, h):
+        with patch("subprocess.Popen") as mock_popen:
+            h._start_vllm()
+        cmd = mock_popen.call_args[0][0]
+        assert "--port" in cmd
+        assert "8000" in cmd
+
+    def test_trust_remote_code_in_cmd(self, h):
+        with patch("subprocess.Popen") as mock_popen:
+            h._start_vllm()
+        cmd = mock_popen.call_args[0][0]
+        assert "--trust-remote-code" in cmd
+
+    def test_tensor_parallel_size_default(self, h):
+        with patch("subprocess.Popen") as mock_popen:
+            h._start_vllm()
+        cmd = mock_popen.call_args[0][0]
+        idx = cmd.index("--tensor-parallel-size")
+        assert cmd[idx + 1] == "1"
+
+    def test_tensor_parallel_size_override(self, h, monkeypatch):
+        monkeypatch.setenv("TENSOR_PARALLEL_SIZE", "4")
+        with patch("subprocess.Popen") as mock_popen:
+            h._start_vllm()
+        cmd = mock_popen.call_args[0][0]
+        idx = cmd.index("--tensor-parallel-size")
+        assert cmd[idx + 1] == "4"
+
+    def test_proc_assigned(self, h):
+        mock_proc = MagicMock()
+        with patch("subprocess.Popen", return_value=mock_proc):
+            h._start_vllm()
+        assert h._vllm_proc is mock_proc
+
+
+# ── _wait_for_vllm ────────────────────────────────────────────────────────────
+
+class TestWaitForVllm:
+    def test_returns_when_healthy(self, h):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        with patch("httpx.get", return_value=mock_resp):
+            h._wait_for_vllm()  # should not raise
+
+    def test_raises_on_timeout(self, h, monkeypatch):
+        monkeypatch.setenv("TRITON_STARTUP_TIMEOUT", "0")
+        monkeypatch.setenv("MODEL_PATH", "/vol/models/gemma")
+        sys.modules.pop("handler", None)
+        mod = importlib.import_module("handler")
+        with patch("httpx.get", side_effect=ConnectionRefusedError):
+            with pytest.raises(RuntimeError, match="ready"):
+                mod._wait_for_vllm()
+
+    def test_retries_before_success(self, h):
+        fail = MagicMock(status_code=503)
+        ok = MagicMock(status_code=200)
+        with patch("httpx.get", side_effect=[ConnectionRefusedError, fail, ok]):
+            with patch("time.sleep"):
+                h._wait_for_vllm()  # should not raise
+
+
 # ── init ──────────────────────────────────────────────────────────────────────
 
 class TestInit:
-    def test_generates_config_before_starting_triton(self, h):
-        call_order = []
-
-        def fake_generate():
-            call_order.append("generate")
-            return "/model_repo", "model"
-
-        def fake_start(repo):
-            call_order.append("start")
-
-        with (
-            patch("handler.generate_model_repo", side_effect=fake_generate),
-            patch("handler._start_triton", side_effect=fake_start),
-            patch("handler._load_tokenizer"),
-            patch("handler._wait_for_triton"),
-        ):
-            h.init()
-
-        assert call_order == ["generate", "start"]
-
-    def test_waits_for_triton_after_start(self, h):
+    def test_start_called_before_wait(self, h):
         call_order = []
 
         with (
-            patch("handler.generate_model_repo", return_value=("/repo", "model")),
-            patch("handler._start_triton"),
-            patch("handler._load_tokenizer", side_effect=lambda: call_order.append("tokenizer")),
-            patch("handler._wait_for_triton", side_effect=lambda: call_order.append("wait")),
+            patch("handler._start_vllm", side_effect=lambda: call_order.append("start")),
+            patch("handler._wait_for_vllm", side_effect=lambda: call_order.append("wait")),
         ):
             h.init()
 
-        # tokenizer loads concurrently with triton (before wait)
-        assert call_order.index("tokenizer") < call_order.index("wait")
+        assert call_order == ["start", "wait"]
 
-    def test_triton_timeout_raises(self, h, monkeypatch):
-        import time
-
-        monkeypatch.setenv("TRITON_STARTUP_TIMEOUT", "0")
-        sys.modules.pop("handler", None)
-        mod = importlib.import_module("handler")
-        mod._tokenizer = MagicMock()
-
+    def test_both_called(self, h):
         with (
-            patch("handler.generate_model_repo", return_value=("/repo", "model")),
-            patch("handler._start_triton"),
-            patch("handler._load_tokenizer"),
-            patch("httpx.get", side_effect=ConnectionRefusedError),
+            patch("handler._start_vllm") as mock_start,
+            patch("handler._wait_for_vllm") as mock_wait,
         ):
-            with pytest.raises(RuntimeError, match="ready"):
-                mod._wait_for_triton()
+            h.init()
+
+        mock_start.assert_called_once()
+        mock_wait.assert_called_once()

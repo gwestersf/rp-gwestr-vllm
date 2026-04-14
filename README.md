@@ -2,27 +2,40 @@
 
 RunPod serverless endpoint using [vLLM](https://github.com/vllm-project/vllm) to serve any Hugging Face model with an OpenAI-compatible chat API.
 
-Designed to scale from 4B → 8B → 26B → 100B+ models by adjusting env vars only — no code changes, no image rebuild.
+Built on the [NVIDIA AI Dynamo](https://github.com/ai-dynamo/dynamo) vLLM runtime image. Designed to scale from 4B to 100B+ models by adjusting env vars only — no code changes, no image rebuild.
+
+---
+
+## Base image
+
+```
+nvcr.io/nvidia/ai-dynamo/vllm-runtime:1.1.0-dev.1-cuda13
+```
+
+This image ships a recent vLLM build optimized for NVIDIA Blackwell (SM_100) and newer. It requires:
+
+- NVIDIA driver **580+** (CUDA 13.1)
+- CUDA **13.1 or 13.2**
+
+> No Triton inference server. The handler starts vLLM's built-in OpenAI-compatible API server directly.
 
 ---
 
 ## How it works
 
 On worker startup, `handler.py`:
-1. Launches `vllm serve` pointing at `MODEL_PATH`
-2. Waits for `/health` to return 200
+1. Launches `python3 -m vllm.entrypoints.openai.api_server` pointing at `MODEL_PATH`
+2. Polls `/health` until ready (up to `TRITON_STARTUP_TIMEOUT` seconds)
 3. Forwards RunPod jobs to `/v1/chat/completions`
 
 ---
 
 ## Environment variables
 
-Set these at the RunPod endpoint level (or via `docker run -e`). The image has no hardcoded model.
-
 | Variable | Default | Description |
 |---|---|---|
 | `MODEL_PATH` | **required** | Path to model weights (e.g. `/runpod-volume/models/gemma-4-E4B-it`) |
-| `TENSOR_PARALLEL_SIZE` | `1` | GPUs per worker — set to `2` for 26B, `4`+ for 70B+/100B+ |
+| `TENSOR_PARALLEL_SIZE` | `1` | GPUs per worker — set to `2` for 26B, `4`+ for 70B+ |
 | `MAX_MODEL_LEN` | `8192` | Max context window in tokens. Reduce if OOM on startup |
 | `GPU_MEMORY_UTILIZATION` | `0.90` | Fraction of VRAM vLLM may use for KV cache |
 | `MAX_NUM_SEQS` | `4` | Max concurrent requests per worker |
@@ -33,9 +46,9 @@ Set these at the RunPod endpoint level (or via `docker run -e`). The image has n
 
 | Model size | VRAM (BF16) | `TENSOR_PARALLEL_SIZE` | GPU |
 |---|---|---|---|
-| 4B (Gemma 4B) | ~16 GB | 1 | RTX PRO 4000 (24 GB) |
-| 8B | ~16 GB | 1 | RTX PRO 4000 (24 GB) |
-| 26B | ~52 GB | 2 | 2× RTX PRO 6000 (48 GB each) |
+| 4B (e.g. Gemma 4 E4B) | ~10 GB | 1 | RTX PRO 6000 Blackwell (48 GB) |
+| 8B | ~16 GB | 1 | RTX PRO 6000 Blackwell (48 GB) |
+| 26B | ~52 GB | 2 | 2× RTX PRO 6000 Blackwell |
 | 70B | ~140 GB | 4 | 4× A100 80 GB |
 | 100B+ MoE | varies | 4–8 | 4–8× H100/A100 |
 
@@ -45,23 +58,10 @@ Set these at the RunPod endpoint level (or via `docker run -e`). The image has n
 
 ### Requirements
 
-- NVIDIA driver **595.45+** (RTX PRO 4000/6000 Blackwell series)
+- NVIDIA driver **580+**
 - Docker + [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
 
-### RTX PRO 4000 Blackwell (24 GB VRAM)
-
-```bash
-docker run --rm --gpus all \
-  -v /path/to/model:/model:ro \
-  -p 8000:8000 \
-  -e MODEL_PATH=/model \
-  -e MAX_MODEL_LEN=4096 \
-  -e GPU_MEMORY_UTILIZATION=0.90 \
-  -e MAX_NUM_SEQS=2 \
-  gwesterrunpod/rp-gwestr-vllm:latest
-```
-
-### RTX PRO 6000 Blackwell (48 GB VRAM) — same driver, larger limits
+### RTX PRO 6000 Blackwell (48 GB VRAM)
 
 ```bash
 docker run --rm --gpus all \
@@ -74,7 +74,7 @@ docker run --rm --gpus all \
   gwesterrunpod/rp-gwestr-vllm:latest
 ```
 
-For a 26B model across **2× RTX PRO 6000** on the same host:
+For a 26B model across **2× RTX PRO 6000**:
 
 ```bash
 docker run --rm --gpus all \
@@ -94,7 +94,7 @@ docker run --rm --gpus all \
 curl http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "model",
+    "model": "/model",
     "messages": [{"role": "user", "content": "How does RunPod serverless work?"}]
   }'
 ```
@@ -119,6 +119,42 @@ docker push gwesterrunpod/rp-gwestr-vllm:latest
    - **Network volume:** mount at `/runpod-volume` (50 GB+)
 3. Set env vars at the endpoint level — at minimum `MODEL_PATH`
 4. Pre-load model weights onto the network volume before starting the endpoint
+
+---
+
+## Testing
+
+### Unit tests (no GPU required)
+
+Tests cover `handler.py` logic with all external I/O mocked (no vLLM process, no model weights).
+
+```bash
+pip install pytest pytest-asyncio
+pytest tests/test_handler.py -v
+```
+
+### Integration tests (GPU + live server required)
+
+Runs against a live vLLM server. Requires:
+- NVIDIA GPU with `nvidia-smi`
+- vLLM server running and healthy at `VLLM_URL`
+- `MODEL_PATH` set to the local tokenizer path (used by aiperf)
+- [`aiperf`](https://github.com/ai-dynamo/aiperf) installed: `uv tool install aiperf --python 3.12`
+
+```bash
+MODEL_PATH=/path/to/model \
+VLLM_URL=http://localhost:8000 \
+pytest tests/test_integration.py -v -s
+```
+
+Environment variables for integration tests:
+
+| Variable | Default | Description |
+|---|---|---|
+| `VLLM_URL` | `http://localhost:8000` | vLLM server base URL |
+| `MODEL_PATH` | **required** | Local tokenizer path for aiperf token counting |
+| `AIPERF_CONCURRENCY` | `2` | Parallel workers |
+| `AIPERF_REQUESTS` | `10` | Total requests to send |
 
 ---
 

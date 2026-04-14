@@ -1,0 +1,61 @@
+{
+  "tests": [
+    {
+      "name": "basic_chat",
+      "input": {
+        "messages": [
+          {"role": "user", "content": "Reply with one word: hello"}
+        ],
+        "max_tokens": 16,
+        "temperature": 0.0
+      },
+      "timeout": 60000
+    },
+    {
+      "name": "streaming_chat",
+      "input": {
+        "messages": [
+          {"role": "user", "content": "Write a haiku about GPUs."}
+        ],
+        "max_tokens": 64,
+        "temperature": 0.7,
+        "stream": true
+      },
+      "timeout": 60000
+    },
+    {
+      "name": "multi_turn",
+      "input": {
+        "messages": [
+          {"role": "user", "content": "What is 2 + 2?"},
+          {"role": "assistant", "content": "4"},
+          {"role": "user", "content": "And what is that times 3?"}
+        ],
+        "max_tokens": 32,
+        "temperature": 0.0
+      },
+      "timeout": 60000
+    }
+  ],
+  "config": {
+    "gpuTypeId": "NVIDIA RTX PRO 6000 Blackwell",
+    "gpuCount": 1,
+    "env": [
+      {
+        "key": "MODEL_PATH",
+        "value": "/runpod-volume/models/gemma-4-E4B-it"
+      },
+      {
+        "key": "TENSOR_PARALLEL_SIZE",
+        "value": "1"
+      },
+      {
+        "key": "MAX_MODEL_LEN",
+        "value": "8192"
+      }
+    ],
+    "allowedCudaVersions": [
+      "13.2", "13.1"
+    ]
+  }
+}

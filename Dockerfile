@@ -1,6 +1,6 @@
 # vLLM OpenAI server — serves any HF model with OpenAI-compatible chat API.
-# Requires CUDA 12.1+ (driver 530+). vLLM 0.19.0 supports Gemma 4.
-FROM vllm/vllm-openai:v0.19.0
+# Requires CUDA 12.1+ (driver 530+).
+FROM nvcr.io/nvidia/ai-dynamo/vllm-runtime:1.1.0-dev.1-cuda13
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PIP_BREAK_SYSTEM_PACKAGES=1
