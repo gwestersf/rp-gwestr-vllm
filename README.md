@@ -10,11 +10,9 @@ Built on the [NVIDIA AI Dynamo](https://github.com/ai-dynamo/dynamo) vLLM runtim
 
 ## Base image
 
-```
-nvcr.io/nvidia/ai-dynamo/vllm-runtime:1.1.0-dev.1-cuda13
-```
+Built from [ai-dynamo/dynamo](https://github.com/ai-dynamo/dynamo) `main`, which ships **vLLM 0.19.0** — the released `nvcr.io/nvidia/ai-dynamo/vllm-runtime` tags are on an older vLLM version that doesn't support Gemma 4. We build from main until the next official release catches up.
 
-This image ships a recent vLLM build optimized for NVIDIA Blackwell (SM_100) and newer. It requires:
+The base image is published as `gwesterrunpod/dynamo-vllm-runtime:main` and requires:
 
 - NVIDIA driver **575+** (CUDA 13.0)
 - CUDA **13.0, 13.1, or 13.2**
