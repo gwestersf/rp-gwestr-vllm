@@ -3,7 +3,7 @@
   "description": "Serve any Hugging Face model with an OpenAI-compatible chat API. Built on NVIDIA AI Dynamo + vLLM 0.19.0. Supports streaming, multi-turn conversations, and all standard sampling parameters.",
   "type": "serverless",
   "category": "language",
-  "iconUrl": "https://raw.githubusercontent.com/vllm-project/vllm/main/docs/source/assets/logos/vllm-logo-text-light.png",
+  "iconUrl": "https://cdn.simpleicons.org/nvidia/76B900",
   "config": {
     "runsOn": "GPU",
     "containerDiskInGb": 100,
