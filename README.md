@@ -16,8 +16,8 @@ nvcr.io/nvidia/ai-dynamo/vllm-runtime:1.1.0-dev.1-cuda13
 
 This image ships a recent vLLM build optimized for NVIDIA Blackwell (SM_100) and newer. It requires:
 
-- NVIDIA driver **580+** (CUDA 13.1)
-- CUDA **13.1 or 13.2**
+- NVIDIA driver **575+** (CUDA 13.0)
+- CUDA **13.0, 13.1, or 13.2**
 
 > No Triton inference server. The handler starts vLLM's built-in OpenAI-compatible API server directly.
 
