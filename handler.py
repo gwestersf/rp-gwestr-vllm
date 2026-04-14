@@ -126,7 +126,7 @@ async def _stream(messages: list, params: dict):
 
 # ── RunPod handler ────────────────────────────────────────────────────────────
 
-async def handler(job):
+async def _handle(job):
     job_input = job["input"]
     messages = job_input.get("messages")
     if not messages:
@@ -148,6 +148,10 @@ async def handler(job):
             "finish_reason": "stop",
         }]
     }
+
+
+async def handler(event):
+    return await _handle(event)
 
 
 if __name__ == "__main__":
