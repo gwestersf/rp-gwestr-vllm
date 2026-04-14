@@ -1,6 +1,6 @@
 # vLLM OpenAI server — serves any HF model with OpenAI-compatible chat API.
 # Built on ai-dynamo/dynamo main (vLLM 0.19.0, CUDA 13.0, driver 575+).
-FROM dynamo-vllm-runtime:main
+FROM gwesterrunpod/dynamo-vllm-runtime:main
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PIP_BREAK_SYSTEM_PACKAGES=1
