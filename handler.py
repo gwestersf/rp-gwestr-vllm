@@ -150,8 +150,8 @@ async def _handle(job):
     }
 
 
-async def handler(event):
-    return await _handle(event)
+def handler(event):
+    return _handle(event)
 
 
 if __name__ == "__main__":
