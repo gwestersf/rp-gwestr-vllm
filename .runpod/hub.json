@@ -1,12 +1,12 @@
 {
-  "title": "vLLM OpenAI Server",
+  "title": "Nvidia Dynamo with vLLM OpenAI Server",
   "description": "Serve any Hugging Face model with an OpenAI-compatible chat API. Built on NVIDIA AI Dynamo + vLLM 0.19.0. Supports streaming, multi-turn conversations, and all standard sampling parameters.",
   "type": "serverless",
   "category": "language",
   "iconUrl": "https://raw.githubusercontent.com/vllm-project/vllm/main/docs/source/assets/logos/vllm-logo-text-light.png",
   "config": {
     "runsOn": "GPU",
-    "containerDiskInGb": 20,
+    "containerDiskInGb": 100,
     "gpuCount": 1,
     "gpuIds": "BLACKWELL_48,BLACKWELL_96",
     "allowedCudaVersions": ["13.2", "13.1", "13.0"],
