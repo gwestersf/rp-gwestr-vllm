@@ -103,18 +103,21 @@ curl http://localhost:8000/v1/chat/completions \
 
 ## Build and push
 
+Bump `VERSION`, then run:
+
 ```bash
-docker build -t gwesterrunpod/rp-gwestr-vllm:latest .
-docker push gwesterrunpod/rp-gwestr-vllm:latest
+./release.sh
 ```
+
+This builds and pushes `gwesterrunpod/rp-gwestr-vllm:<version>`. Never push `latest` — pin the version tag in your RunPod endpoint template so deployments are reproducible and rollback is a one-line change.
 
 ---
 
 ## RunPod deployment
 
-1. Push image to Docker Hub
-2. Create a serverless endpoint:
-   - **Image:** `gwesterrunpod/rp-gwestr-vllm:latest`
+1. Bump `VERSION`, run `./release.sh`
+2. Create or update a serverless endpoint:
+   - **Image:** `gwesterrunpod/rp-gwestr-vllm:0.2.0` (or current version from `VERSION`)
    - **Container disk:** 20 GB minimum
    - **Network volume:** mount at `/runpod-volume` (50 GB+)
 3. Set env vars at the endpoint level — at minimum `MODEL_PATH`
