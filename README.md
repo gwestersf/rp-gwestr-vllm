@@ -1,5 +1,7 @@
 # rp-gwestr-vllm
 
+[![Runpod](https://api.runpod.io/badge/gwestersf/rp-gwestr-vllm)](https://console.runpod.io/hub/gwestersf/rp-gwestr-vllm)
+
 RunPod serverless endpoint using [vLLM](https://github.com/vllm-project/vllm) to serve any Hugging Face model with an OpenAI-compatible chat API.
 
 Built on the [NVIDIA AI Dynamo](https://github.com/ai-dynamo/dynamo) vLLM runtime image. Designed to scale from 4B to 100B+ models by adjusting env vars only — no code changes, no image rebuild.

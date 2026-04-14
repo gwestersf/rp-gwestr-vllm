@@ -1,0 +1,101 @@
+{
+  "title": "vLLM OpenAI Server",
+  "description": "Serve any Hugging Face model with an OpenAI-compatible chat API. Built on NVIDIA AI Dynamo + vLLM 0.19.0. Supports streaming, multi-turn conversations, and all standard sampling parameters.",
+  "type": "serverless",
+  "category": "language",
+  "iconUrl": "https://raw.githubusercontent.com/vllm-project/vllm/main/docs/source/assets/logos/vllm-logo-text-light.png",
+  "config": {
+    "runsOn": "GPU",
+    "containerDiskInGb": 20,
+    "gpuCount": 1,
+    "gpuIds": "BLACKWELL_48,BLACKWELL_96,ADA_48,AMPERE_48",
+    "allowedCudaVersions": ["13.2", "13.1", "13.0", "12.9"],
+    "env": [
+      {
+        "key": "MODEL_PATH",
+        "input": {
+          "name": "Model Path",
+          "type": "string",
+          "description": "Path to model weights on your network volume (e.g. /runpod-volume/models/gemma-4-E4B-it)",
+          "default": "/runpod-volume/models/gemma-4-E4B-it"
+        }
+      },
+      {
+        "key": "MAX_MODEL_LEN",
+        "input": {
+          "name": "Max Context Length",
+          "type": "number",
+          "description": "Maximum context window in tokens. Reduce if OOM on startup.",
+          "default": "8192",
+          "min": 512,
+          "max": 131072,
+          "advanced": true
+        }
+      },
+      {
+        "key": "TENSOR_PARALLEL_SIZE",
+        "input": {
+          "name": "Tensor Parallel Size",
+          "type": "number",
+          "description": "Number of GPUs to shard the model across. Set gpuCount to match.",
+          "default": "1",
+          "min": 1,
+          "max": 8,
+          "advanced": true
+        }
+      },
+      {
+        "key": "GPU_MEMORY_UTILIZATION",
+        "input": {
+          "name": "GPU Memory Utilization",
+          "type": "string",
+          "description": "Fraction of VRAM reserved for KV cache (0.0–1.0).",
+          "default": "0.90",
+          "advanced": true
+        }
+      },
+      {
+        "key": "MAX_NUM_SEQS",
+        "input": {
+          "name": "Max Concurrent Sequences",
+          "type": "number",
+          "description": "Maximum number of requests processed in parallel.",
+          "default": "4",
+          "min": 1,
+          "max": 256,
+          "advanced": true
+        }
+      }
+    ],
+    "presets": [
+      {
+        "name": "Gemma 4 E4B (4B)",
+        "defaults": {
+          "MODEL_PATH": "/runpod-volume/models/gemma-4-E4B-it",
+          "MAX_MODEL_LEN": "8192",
+          "TENSOR_PARALLEL_SIZE": "1",
+          "GPU_MEMORY_UTILIZATION": "0.90",
+          "MAX_NUM_SEQS": "4"
+        }
+      },
+      {
+        "name": "8B model (1× GPU)",
+        "defaults": {
+          "MAX_MODEL_LEN": "8192",
+          "TENSOR_PARALLEL_SIZE": "1",
+          "GPU_MEMORY_UTILIZATION": "0.90",
+          "MAX_NUM_SEQS": "4"
+        }
+      },
+      {
+        "name": "26B model (2× GPU)",
+        "defaults": {
+          "MAX_MODEL_LEN": "8192",
+          "TENSOR_PARALLEL_SIZE": "2",
+          "GPU_MEMORY_UTILIZATION": "0.90",
+          "MAX_NUM_SEQS": "4"
+        }
+      }
+    ]
+  }
+}
