@@ -156,8 +156,8 @@ async def _run_tests(job_input: dict) -> dict:
     try:
         payload = {
             "model": model_name,
-            "messages": [{"role": "user", "content": "Reply with one word: hello"}],
-            "max_tokens": 16,
+            "messages": [{"role": "user", "content": "Explain how the CUDA memory hierarchy works — specifically how data moves between global memory, L2 cache, L1/shared memory, and registers during a typical matrix multiplication kernel. Include how warp-level memory access patterns affect coalescing and why misaligned access hurts throughput."}],
+            "max_tokens": 512,
             "temperature": 0.0,
         }
         async with httpx.AsyncClient(timeout=60) as client:
