@@ -196,3 +196,9 @@ Environment variables for integration tests:
 {"choices": [{"delta": {"role": "assistant", "content": " there"}, "finish_reason": null}]}
 {"choices": [{"delta": {"role": "assistant", "content": ""}, "finish_reason": "stop"}]}
 ```
+
+---
+
+## License
+
+[Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0)
