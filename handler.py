@@ -12,6 +12,13 @@ Input schema:
         "presence_penalty": 0.0, # optional
         "stream": false          # optional — set true for SSE streaming
     }
+
+Test mode:
+    {
+        "_run_tests": true,      # runs health check, chat sanity, and aiperf benchmark
+        "concurrency": 2,        # optional — aiperf parallel workers (default: 2)
+        "requests": 10           # optional — aiperf total requests (default: 10)
+    }
 """
 
 import os
@@ -124,10 +131,69 @@ async def _stream(messages: list, params: dict):
                     yield delta
 
 
+# ── Endpoint tests ────────────────────────────────────────────────────────────
+
+async def _run_tests(job_input: dict) -> dict:
+    concurrency = str(job_input.get("concurrency", 2))
+    requests = str(job_input.get("requests", 10))
+    results = {}
+
+    # Health check
+    try:
+        r = httpx.get(f"{VLLM_BASE}/health", timeout=10)
+        results["health"] = "ok" if r.status_code == 200 else f"failed (status {r.status_code})"
+    except Exception as e:
+        results["health"] = f"failed: {e}"
+
+    # Resolve model name as vLLM registered it
+    try:
+        r = httpx.get(f"{VLLM_BASE}/v1/models", timeout=10)
+        model_name = r.json()["data"][0]["id"]
+    except Exception:
+        model_name = MODEL_PATH
+
+    # Chat sanity check
+    try:
+        payload = {
+            "model": model_name,
+            "messages": [{"role": "user", "content": "Reply with one word: hello"}],
+            "max_tokens": 16,
+            "temperature": 0.0,
+        }
+        async with httpx.AsyncClient(timeout=60) as client:
+            r = await client.post(f"{VLLM_BASE}/v1/chat/completions", json=payload)
+            content = r.json()["choices"][0]["message"]["content"].strip()
+            results["chat"] = f"ok — response: {content!r}"
+    except Exception as e:
+        results["chat"] = f"failed: {e}"
+
+    # aiperf benchmark
+    cmd = [
+        "/opt/dynamo/venv/bin/aiperf", "profile",
+        "--model", model_name,
+        "--endpoint-type", "chat",
+        "--url", VLLM_BASE,
+        "--tokenizer", MODEL_PATH,
+        "--streaming",
+        "--concurrency", concurrency,
+        "--request-count", requests,
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    results["aiperf"] = proc.stdout
+    if proc.returncode != 0:
+        results["aiperf_error"] = proc.stderr
+
+    return results
+
+
 # ── RunPod handler ────────────────────────────────────────────────────────────
 
 async def _handle(job):
     job_input = job["input"]
+
+    if job_input.get("_run_tests"):
+        return await _run_tests(job_input)
+
     messages = job_input.get("messages")
     if not messages:
         return {"error": "'messages' is required"}

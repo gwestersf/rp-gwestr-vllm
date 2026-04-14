@@ -112,7 +112,37 @@ This builds and pushes `gwesterrunpod/rp-gwestr-vllm:<version>`. Pin the version
 
 ---
 
-## Testing
+## Endpoint tests
+
+Send `"_run_tests": true` as the input to run a health check, chat sanity check, and aiperf performance benchmark directly inside the worker — no external tooling required.
+
+```json
+{
+  "input": {
+    "_run_tests": true,
+    "concurrency": 2,
+    "requests": 10
+  }
+}
+```
+
+`concurrency` and `requests` are optional (defaults: 2 and 10). With curl:
+
+```bash
+curl -X POST https://api.runpod.ai/v2/{endpoint_id}/runsync \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $RUNPOD_API_KEY" \
+  -d '{"input": {"_run_tests": true, "concurrency": 2, "requests": 10}}'
+```
+
+The response includes:
+- `health` — vLLM `/health` status
+- `chat` — single completion sanity check and response
+- `aiperf` — full aiperf metrics table (TTFT, ITL, throughput, etc.)
+
+---
+
+## Local testing
 
 ### Unit tests (no GPU required)
 

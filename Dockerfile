@@ -5,7 +5,7 @@ FROM gwesterrunpod/dynamo-vllm-runtime:main
 ENV DEBIAN_FRONTEND=noninteractive \
     PIP_BREAK_SYSTEM_PACKAGES=1
 
-RUN /opt/dynamo/venv/bin/pip install --no-cache-dir runpod httpx \
+RUN /opt/dynamo/venv/bin/pip install --no-cache-dir runpod httpx aiperf \
  && /opt/dynamo/venv/bin/pip install --no-cache-dir "transformers==5.5.3"
 
 WORKDIR /app
