@@ -1,0 +1,189 @@
+2026-04-13 19:42:32.327 - aiperf.cli_runner - INFO - Starting AIPerf System
+2026-04-13 19:42:32.330 - aiperf.cli_runner - INFO - ✓ Tokenizer /model detected
+2026-04-13 19:42:32.330 - aiperf.cli_runner - INFO - 1 tokenizer validated • 0.0s
+2026-04-13 19:42:32.504 - GPUTelemetryJSONLWriter_db9f9709 - INFO - GPU telemetry export enabled: artifacts/_model-openai-chat-concurrency2/gpu_telemetry_export.jsonl
+2026-04-13 19:42:32.506 - RecordExportResultsProcessor_f455c758 - INFO - Record metrics export enabled: artifacts/_model-openai-chat-concurrency2/profile_export.jsonl
+2026-04-13 19:42:32.510 - server_metrics_manager - INFO - Server Metrics: Discovered 1 endpoints: ['http://localhost:8000/metrics']
+2026-04-13 19:42:32.577 - system_controller - INFO - Registered Worker Manager (id: 'worker_manager')
+2026-04-13 19:42:32.605 - system_controller - INFO - Registered Dataset Manager (id: 'dataset_manager')
+2026-04-13 19:42:32.621 - system_controller - INFO - Registered Gpu Telemetry Manager (id: 'gpu_telemetry_manager')
+2026-04-13 19:42:32.626 - system_controller - INFO - Registered Server Metrics Manager (id: 'server_metrics_manager')
+2026-04-13 19:42:32.652 - system_controller - INFO - Registered Timing Manager (id: 'timing_manager')
+2026-04-13 19:42:32.656 - system_controller - INFO - Registered Records Manager (id: 'records_manager')
+2026-04-13 19:42:32.712 - system_controller - INFO - Registered Record Processor (id: 'record_processor_6351730b')
+2026-04-13 19:42:32.770 - system_controller - INFO - Registered Worker (id: 'worker_a253d454')
+2026-04-13 19:42:32.770 - system_controller - INFO - Registered Worker (id: 'worker_c50cb676')
+2026-04-13 19:42:32.971 - system_controller - INFO - AIPerf System is CONFIGURING
+2026-04-13 19:42:32.971 - system_controller - INFO - Configuring all services to start profiling
+2026-04-13 19:42:32.972 - timing_manager - INFO - Waiting for dataset to be configured before configuring timing
+2026-04-13 19:42:32.973 - InferenceResultParser_c78186b3 - INFO - Configuring tokenizers for inference result parser
+2026-04-13 19:42:32.973 - dataset_manager - INFO - Configuring tokenizer(s) for dataset manager
+2026-04-13 19:42:32.979 - system_controller - INFO - GPU telemetry disabled - no DCGM endpoints reachable
+2026-04-13 19:42:32.980 - server_metrics_manager - INFO - Server Metrics: Capturing baseline metrics...
+2026-04-13 19:42:32.988 - http://localhost:8000/metrics - INFO - Skipping unsupported summary metric: http_request_size_bytes
+2026-04-13 19:42:32.988 - http://localhost:8000/metrics - INFO - Skipping unsupported summary metric: http_response_size_bytes
+2026-04-13 19:42:32.989 - system_controller - INFO - Server metrics enabled - 1/1 endpoint(s) reachable.
+2026-04-13 19:42:33.672 - record_processor_6351730b - ERROR - Failed to handle command profile_configure with hook @on_command 🡒 RecordProcessor._profile_configure_command: Failed to load tokenizer '/model'
+2026-04-13 19:42:33.672 - dataset_manager - ERROR - Failed to handle command profile_configure with hook @on_command 🡒 DatasetManager._profile_configure_command: Failed to load tokenizer '/model'
+2026-04-13 19:42:33.673 - system_controller - ERROR - Error running Hook(func=<bound method SystemController._start_services of <SystemController system_controller (state=starting)>>, params=None) hook for SystemController: Failed to perform operation 'Configure Profiling'
+2026-04-13 19:42:33.673 - system_controller - ERROR - Failed for SystemController (id=system_controller): SystemController._start_services: Failed to perform operation 'Configure Profiling'
+2026-04-13 19:43:11.632 - aiperf.cli_runner - INFO - Starting AIPerf System
+2026-04-13 19:43:11.633 - aiperf.cli_runner - INFO - ✓ Tokenizer /home/gregoryw/.cache/huggingface/hub/gemma-4-E4B-it detected
+2026-04-13 19:43:11.633 - aiperf.cli_runner - INFO - 1 tokenizer validated • 0.0s
+2026-04-13 19:43:11.765 - system_controller - INFO - Registered Dataset Manager (id: 'dataset_manager')
+2026-04-13 19:43:11.765 - server_metrics_manager - INFO - Server Metrics: Discovered 1 endpoints: ['http://localhost:8000/metrics']
+2026-04-13 19:43:11.767 - GPUTelemetryJSONLWriter_a1a077bc - INFO - GPU telemetry export enabled: artifacts/_model-openai-chat-concurrency2/gpu_telemetry_export.jsonl
+2026-04-13 19:43:11.768 - RecordExportResultsProcessor_0c06b620 - INFO - Record metrics export enabled: artifacts/_model-openai-chat-concurrency2/profile_export.jsonl
+2026-04-13 19:43:11.859 - system_controller - INFO - Registered Worker Manager (id: 'worker_manager')
+2026-04-13 19:43:11.876 - system_controller - INFO - Registered Server Metrics Manager (id: 'server_metrics_manager')
+2026-04-13 19:43:11.876 - system_controller - INFO - Registered Gpu Telemetry Manager (id: 'gpu_telemetry_manager')
+2026-04-13 19:43:11.897 - system_controller - INFO - Registered Records Manager (id: 'records_manager')
+2026-04-13 19:43:11.920 - system_controller - INFO - Registered Timing Manager (id: 'timing_manager')
+2026-04-13 19:43:11.993 - system_controller - INFO - Registered Record Processor (id: 'record_processor_bc8d7d74')
+2026-04-13 19:43:12.045 - system_controller - INFO - Registered Worker (id: 'worker_8df04771')
+2026-04-13 19:43:12.048 - system_controller - INFO - Registered Worker (id: 'worker_71df8fa3')
+2026-04-13 19:43:12.254 - system_controller - INFO - AIPerf System is CONFIGURING
+2026-04-13 19:43:12.254 - system_controller - INFO - Configuring all services to start profiling
+2026-04-13 19:43:12.255 - dataset_manager - INFO - Configuring tokenizer(s) for dataset manager
+2026-04-13 19:43:12.255 - InferenceResultParser_7f401473 - INFO - Configuring tokenizers for inference result parser
+2026-04-13 19:43:12.255 - timing_manager - INFO - Waiting for dataset to be configured before configuring timing
+2026-04-13 19:43:12.259 - system_controller - INFO - GPU telemetry disabled - no DCGM endpoints reachable
+2026-04-13 19:43:12.262 - server_metrics_manager - INFO - Server Metrics: Capturing baseline metrics...
+2026-04-13 19:43:12.271 - http://localhost:8000/metrics - INFO - Skipping unsupported summary metric: http_request_size_bytes
+2026-04-13 19:43:12.271 - http://localhost:8000/metrics - INFO - Skipping unsupported summary metric: http_response_size_bytes
+2026-04-13 19:43:12.272 - system_controller - INFO - Server metrics enabled - 1/1 endpoint(s) reachable.
+2026-04-13 19:43:14.149 - dataset_manager - INFO - Tokenizer(s) configured in 1.89 seconds
+2026-04-13 19:43:14.149 - dataset_manager - INFO - Configuring dataset for dataset_manager
+2026-04-13 19:43:14.154 - InferenceResultParser_7f401473 - INFO - Initialized tokenizers: {'/model': {'class': 'GemmaTokenizer', 'name_or_path': '/home/gregoryw/.cache/huggingface/hub/gemma-4-E4B-it'}} in 1.90 seconds
+2026-04-13 19:43:14.372 - SyntheticDatasetComposer - INFO - Using default sampling strategy for synthetic dataset: shuffle
+2026-04-13 19:43:14.398 - MemoryMapDatasetBackingStore_c5e79e38 - INFO - Memory-mapped backing store initialized (streaming to /tmp/aiperf_mmap_93ba07b8-9c3f-4ff0-8783-12733f4fd694/dataset.dat)
+2026-04-13 19:43:14.400 - MemoryMapDatasetBackingStore_c5e79e38 - INFO - Data file finalized: 100 conversations, 0.27 MB
+2026-04-13 19:43:14.400 - MemoryMapDatasetBackingStore_c5e79e38 - INFO - Index file created: /tmp/aiperf_mmap_93ba07b8-9c3f-4ff0-8783-12733f4fd694/index.dat
+2026-04-13 19:43:14.400 - dataset_manager - INFO - Backing store finalized: client_type=DatasetClientStoreType.MEMORY_MAP data_file_path=PosixPath('/tmp/aiperf_mmap_93ba07b8-9c3f-4ff0-8783-12733f4fd694/dataset.dat') index_file_path=PosixPath('/tmp/aiperf_mmap_93ba07b8-9c3f-4ff0-8783-12733f4fd694/index.dat') conversation_count=100 total_size_bytes=283889 compressed_data_file_path=None compressed_index_file_path=None compressed_size_bytes=0
+2026-04-13 19:43:14.400 - dataset_manager - INFO - sampling strategy: shuffle, unique conversations: 100, unique turn count: 100
+2026-04-13 19:43:14.401 - dataset_manager - INFO - Generating inputs.json file at /home/gregoryw/rp-gwestr-vllm/artifacts/_model-openai-chat-concurrency2/inputs.json
+2026-04-13 19:43:14.402 - dataset_manager - INFO - inputs.json file generated in 0.00 seconds
+2026-04-13 19:43:14.416 - PhaseOrchestrator_2a7560b4 - INFO - Initialized 1 phase(s): ['Profiling']
+2026-04-13 19:43:14.456 - dataset_manager - INFO - Dataset client initialized and freed 100 conversations from memory
+2026-04-13 19:43:14.456 - dataset_manager - INFO - Dataset configured in 0.31 seconds
+2026-04-13 19:43:14.457 - system_controller - INFO - All services configured in 2.20 seconds
+2026-04-13 19:43:14.457 - system_controller - INFO - AIPerf System is CONFIGURED
+2026-04-13 19:43:14.458 - server_metrics_manager - INFO - Server Metrics: Started 1 collector(s) successfully
+2026-04-13 19:43:14.459 - system_controller - INFO - All services started profiling successfully
+2026-04-13 19:43:14.459 - system_controller - INFO - AIPerf System is PROFILING
+2026-04-13 19:43:14.459 - RateTiming - INFO - Creating interval generator: pattern=concurrency_burst, rate=None, smoothness=None
+2026-04-13 19:43:14.460 - PhaseRunner - NOTICE - Phase profiling started | target: 10 requests
+2026-04-13 19:43:14.460 - records_manager - INFO - Credit phase start: profiling
+2026-04-13 19:44:21.775 - PhaseRunner - NOTICE - Phase profiling sending complete | sent=10, completed=8, in_flight=2 | sessions: sent=10, completed=8
+2026-04-13 19:44:21.776 - records_manager - INFO - Sent 10 requests. Waiting for all to complete...
+2026-04-13 19:44:45.196 - PhaseRunner - NOTICE - Phase profiling complete | completed=10, cancelled=0, errors=0 | sessions: completed=10, cancelled=0 | elapsed=90.74s
+2026-04-13 19:44:45.196 - PhaseOrchestrator_2a7560b4 - NOTICE - All credits completed
+2026-04-13 19:44:45.196 - system_controller - INFO - Received credits complete from 'timing_manager'
+2026-04-13 19:44:45.197 - records_manager - INFO - Received CREDIT_PHASE_COMPLETE message, Phase complete: PhaseRecordsStats(phase=CreditPhase.PROFILING, start_ns=1776134594460032569, sent_end_ns=1776134661775751586, requests_end_ns=1776134685195898815, total_expected_requests=10, expected_duration_sec=None, expected_num_sessions=None, expected_grace_period_sec=None, final_requests_sent=None, final_requests_completed=10, final_requests_cancelled=0, final_request_errors=0, final_sent_sessions=None, final_completed_sessions=None, final_cancelled_sessions=None, timeout_triggered=False, grace_period_timeout_triggered=False, was_cancelled=False, records_end_ns=None, success_records=9, error_records=0)
+2026-04-13 19:44:45.197 - records_manager - NOTICE - All requests have completed, please wait for the results to be processed (currently 9 of 10 records processed)...
+2026-04-13 19:44:45.197 - records_manager - INFO - All credits complete, please wait for the results to be processed...
+2026-04-13 19:44:45.205 - records_manager - INFO - Processed 10 valid requests and 0 errors (10 total).
+2026-04-13 19:44:45.205 - records_manager - INFO - Received all records, processing now...
+2026-04-13 19:44:45.206 - server_metrics_manager - INFO - Server Metrics: Profiling complete, capturing final metrics...
+2026-04-13 19:44:45.206 - records_manager - INFO - Waiting 2.0s for server metrics flush period...
+2026-04-13 19:44:47.195 - records_manager - INFO - Processing records results...
+2026-04-13 19:44:47.205 - system_controller - INFO - Waiting for server metrics results...
+2026-04-13 19:44:47.205 - system_controller - INFO - Waiting for server metrics results...
+2026-04-13 19:44:47.211 - records_manager - INFO - _finalize_and_process_results completed
+2026-04-13 19:44:47.213 - system_controller - INFO - All results received, initiating shutdown
+2026-04-13 19:44:47.816 - ExporterManager - INFO - Exporting all records
+2026-04-13 19:44:47.839 - ExporterManager - INFO - Exporting console data
+2026-04-13 20:00:21.483 - aiperf.cli_runner - INFO - Starting AIPerf System
+2026-04-13 20:00:21.484 - aiperf.cli_runner - INFO - ✓ Tokenizer /home/gregoryw/.cache/huggingface/hub/models--google--gemma-4-E4B-it/snapshots/ detected
+2026-04-13 20:00:21.484 - aiperf.cli_runner - INFO - 1 tokenizer validated • 0.0s
+2026-04-13 20:00:21.615 - server_metrics_manager - INFO - Server Metrics: Discovered 1 endpoints: ['http://localhost:8000/metrics']
+2026-04-13 20:00:21.617 - GPUTelemetryJSONLWriter_9b990ecb - INFO - GPU telemetry export enabled: artifacts/_model-openai-chat-concurrency2/gpu_telemetry_export.jsonl
+2026-04-13 20:00:21.618 - RecordExportResultsProcessor_14ddc58d - INFO - Record metrics export enabled: artifacts/_model-openai-chat-concurrency2/profile_export.jsonl
+2026-04-13 20:00:21.709 - system_controller - INFO - Registered Worker Manager (id: 'worker_manager')
+2026-04-13 20:00:21.720 - system_controller - INFO - Registered Dataset Manager (id: 'dataset_manager')
+2026-04-13 20:00:21.724 - system_controller - INFO - Registered Gpu Telemetry Manager (id: 'gpu_telemetry_manager')
+2026-04-13 20:00:21.724 - system_controller - INFO - Registered Server Metrics Manager (id: 'server_metrics_manager')
+2026-04-13 20:00:21.750 - system_controller - INFO - Registered Records Manager (id: 'records_manager')
+2026-04-13 20:00:21.767 - system_controller - INFO - Registered Timing Manager (id: 'timing_manager')
+2026-04-13 20:00:21.839 - system_controller - INFO - Registered Record Processor (id: 'record_processor_1017bcea')
+2026-04-13 20:00:21.890 - system_controller - INFO - Registered Worker (id: 'worker_a382a428')
+2026-04-13 20:00:21.895 - system_controller - INFO - Registered Worker (id: 'worker_641ead7e')
+2026-04-13 20:00:22.104 - system_controller - INFO - AIPerf System is CONFIGURING
+2026-04-13 20:00:22.104 - system_controller - INFO - Configuring all services to start profiling
+2026-04-13 20:00:22.105 - dataset_manager - INFO - Configuring tokenizer(s) for dataset manager
+2026-04-13 20:00:22.105 - InferenceResultParser_0661f8f6 - INFO - Configuring tokenizers for inference result parser
+2026-04-13 20:00:22.106 - timing_manager - INFO - Waiting for dataset to be configured before configuring timing
+2026-04-13 20:00:22.109 - system_controller - INFO - GPU telemetry disabled - no DCGM endpoints reachable
+2026-04-13 20:00:22.113 - server_metrics_manager - INFO - Server Metrics: Capturing baseline metrics...
+2026-04-13 20:00:22.120 - http://localhost:8000/metrics - INFO - Skipping unsupported summary metric: http_request_size_bytes
+2026-04-13 20:00:22.120 - http://localhost:8000/metrics - INFO - Skipping unsupported summary metric: http_response_size_bytes
+2026-04-13 20:00:22.121 - system_controller - INFO - Server metrics enabled - 1/1 endpoint(s) reachable.
+2026-04-13 20:00:22.517 - dataset_manager - ERROR - Failed to handle command profile_configure with hook @on_command 🡒 DatasetManager._profile_configure_command: Failed to load tokenizer '/home/gregoryw/.cache/huggingface/hub/models--google--gemma-4-E4B-it/snapshots/'
+2026-04-13 20:00:22.519 - system_controller - ERROR - Error running Hook(func=<bound method SystemController._start_services of <SystemController system_controller (state=starting)>>, params=None) hook for SystemController: Failed to perform operation 'Configure Profiling'
+2026-04-13 20:00:22.519 - system_controller - ERROR - Failed for SystemController (id=system_controller): SystemController._start_services: Failed to perform operation 'Configure Profiling'
+2026-04-13 20:00:32.525 - aiperf.cli_runner - INFO - Starting AIPerf System
+2026-04-13 20:00:32.527 - aiperf.cli_runner - INFO - ✓ Tokenizer /home/gregoryw/.cache/huggingface/hub/gemma-4-E4B-it detected
+2026-04-13 20:00:32.527 - aiperf.cli_runner - INFO - 1 tokenizer validated • 0.0s
+2026-04-13 20:00:32.657 - system_controller - INFO - Registered Dataset Manager (id: 'dataset_manager')
+2026-04-13 20:00:32.657 - server_metrics_manager - INFO - Server Metrics: Discovered 1 endpoints: ['http://localhost:8000/metrics']
+2026-04-13 20:00:32.660 - GPUTelemetryJSONLWriter_a0164985 - INFO - GPU telemetry export enabled: artifacts/_model-openai-chat-concurrency2/gpu_telemetry_export.jsonl
+2026-04-13 20:00:32.661 - RecordExportResultsProcessor_8474b69f - INFO - Record metrics export enabled: artifacts/_model-openai-chat-concurrency2/profile_export.jsonl
+2026-04-13 20:00:32.677 - system_controller - INFO - Registered Server Metrics Manager (id: 'server_metrics_manager')
+2026-04-13 20:00:32.751 - system_controller - INFO - Registered Worker Manager (id: 'worker_manager')
+2026-04-13 20:00:32.777 - system_controller - INFO - Registered Gpu Telemetry Manager (id: 'gpu_telemetry_manager')
+2026-04-13 20:00:32.796 - system_controller - INFO - Registered Records Manager (id: 'records_manager')
+2026-04-13 20:00:32.812 - system_controller - INFO - Registered Timing Manager (id: 'timing_manager')
+2026-04-13 20:00:32.883 - system_controller - INFO - Registered Record Processor (id: 'record_processor_9073d74d')
+2026-04-13 20:00:32.932 - system_controller - INFO - Registered Worker (id: 'worker_16d5fc25')
+2026-04-13 20:00:32.937 - system_controller - INFO - Registered Worker (id: 'worker_1a0866d3')
+2026-04-13 20:00:33.146 - system_controller - INFO - AIPerf System is CONFIGURING
+2026-04-13 20:00:33.146 - system_controller - INFO - Configuring all services to start profiling
+2026-04-13 20:00:33.148 - InferenceResultParser_88176a15 - INFO - Configuring tokenizers for inference result parser
+2026-04-13 20:00:33.148 - dataset_manager - INFO - Configuring tokenizer(s) for dataset manager
+2026-04-13 20:00:33.148 - timing_manager - INFO - Waiting for dataset to be configured before configuring timing
+2026-04-13 20:00:33.151 - system_controller - INFO - GPU telemetry disabled - no DCGM endpoints reachable
+2026-04-13 20:00:33.155 - server_metrics_manager - INFO - Server Metrics: Capturing baseline metrics...
+2026-04-13 20:00:33.162 - http://localhost:8000/metrics - INFO - Skipping unsupported summary metric: http_request_size_bytes
+2026-04-13 20:00:33.162 - http://localhost:8000/metrics - INFO - Skipping unsupported summary metric: http_response_size_bytes
+2026-04-13 20:00:33.163 - system_controller - INFO - Server metrics enabled - 1/1 endpoint(s) reachable.
+2026-04-13 20:00:35.041 - dataset_manager - INFO - Tokenizer(s) configured in 1.89 seconds
+2026-04-13 20:00:35.041 - dataset_manager - INFO - Configuring dataset for dataset_manager
+2026-04-13 20:00:35.044 - InferenceResultParser_88176a15 - INFO - Initialized tokenizers: {'/model': {'class': 'GemmaTokenizer', 'name_or_path': '/home/gregoryw/.cache/huggingface/hub/gemma-4-E4B-it'}} in 1.90 seconds
+2026-04-13 20:00:35.257 - SyntheticDatasetComposer - INFO - Using default sampling strategy for synthetic dataset: shuffle
+2026-04-13 20:00:35.284 - MemoryMapDatasetBackingStore_064b6870 - INFO - Memory-mapped backing store initialized (streaming to /tmp/aiperf_mmap_488f2bf7-0763-41dd-abb9-70d092d88327/dataset.dat)
+2026-04-13 20:00:35.286 - MemoryMapDatasetBackingStore_064b6870 - INFO - Data file finalized: 100 conversations, 0.27 MB
+2026-04-13 20:00:35.287 - MemoryMapDatasetBackingStore_064b6870 - INFO - Index file created: /tmp/aiperf_mmap_488f2bf7-0763-41dd-abb9-70d092d88327/index.dat
+2026-04-13 20:00:35.287 - dataset_manager - INFO - Backing store finalized: client_type=DatasetClientStoreType.MEMORY_MAP data_file_path=PosixPath('/tmp/aiperf_mmap_488f2bf7-0763-41dd-abb9-70d092d88327/dataset.dat') index_file_path=PosixPath('/tmp/aiperf_mmap_488f2bf7-0763-41dd-abb9-70d092d88327/index.dat') conversation_count=100 total_size_bytes=282878 compressed_data_file_path=None compressed_index_file_path=None compressed_size_bytes=0
+2026-04-13 20:00:35.287 - dataset_manager - INFO - sampling strategy: shuffle, unique conversations: 100, unique turn count: 100
+2026-04-13 20:00:35.287 - dataset_manager - INFO - Generating inputs.json file at /home/gregoryw/rp-gwestr-vllm/artifacts/_model-openai-chat-concurrency2/inputs.json
+2026-04-13 20:00:35.288 - dataset_manager - INFO - inputs.json file generated in 0.00 seconds
+2026-04-13 20:00:35.306 - PhaseOrchestrator_ee05ce09 - INFO - Initialized 1 phase(s): ['Profiling']
+2026-04-13 20:00:35.346 - dataset_manager - INFO - Dataset client initialized and freed 100 conversations from memory
+2026-04-13 20:00:35.346 - dataset_manager - INFO - Dataset configured in 0.30 seconds
+2026-04-13 20:00:35.347 - system_controller - INFO - All services configured in 2.20 seconds
+2026-04-13 20:00:35.347 - system_controller - INFO - AIPerf System is CONFIGURED
+2026-04-13 20:00:35.348 - server_metrics_manager - INFO - Server Metrics: Started 1 collector(s) successfully
+2026-04-13 20:00:35.349 - system_controller - INFO - All services started profiling successfully
+2026-04-13 20:00:35.349 - system_controller - INFO - AIPerf System is PROFILING
+2026-04-13 20:00:35.350 - RateTiming - INFO - Creating interval generator: pattern=concurrency_burst, rate=None, smoothness=None
+2026-04-13 20:00:35.350 - PhaseRunner - NOTICE - Phase profiling started | target: 10 requests
+2026-04-13 20:00:35.350 - records_manager - INFO - Credit phase start: profiling
+2026-04-13 20:01:48.228 - PhaseRunner - NOTICE - Phase profiling sending complete | sent=10, completed=8, in_flight=2 | sessions: sent=10, completed=8
+2026-04-13 20:01:48.229 - records_manager - INFO - Sent 10 requests. Waiting for all to complete...
+2026-04-13 20:01:59.096 - PhaseRunner - NOTICE - Phase profiling complete | completed=10, cancelled=0, errors=0 | sessions: completed=10, cancelled=0 | elapsed=83.75s
+2026-04-13 20:01:59.096 - PhaseOrchestrator_ee05ce09 - NOTICE - All credits completed
+2026-04-13 20:01:59.097 - system_controller - INFO - Received credits complete from 'timing_manager'
+2026-04-13 20:01:59.097 - records_manager - INFO - Received CREDIT_PHASE_COMPLETE message, Phase complete: PhaseRecordsStats(phase=CreditPhase.PROFILING, start_ns=1776135635350255507, sent_end_ns=1776135708228736086, requests_end_ns=1776135719096235158, total_expected_requests=10, expected_duration_sec=None, expected_num_sessions=None, expected_grace_period_sec=None, final_requests_sent=None, final_requests_completed=10, final_requests_cancelled=0, final_request_errors=0, final_sent_sessions=None, final_completed_sessions=None, final_cancelled_sessions=None, timeout_triggered=False, grace_period_timeout_triggered=False, was_cancelled=False, records_end_ns=None, success_records=9, error_records=0)
+2026-04-13 20:01:59.097 - records_manager - NOTICE - All requests have completed, please wait for the results to be processed (currently 9 of 10 records processed)...
+2026-04-13 20:01:59.097 - records_manager - INFO - All credits complete, please wait for the results to be processed...
+2026-04-13 20:01:59.102 - records_manager - INFO - Processed 10 valid requests and 0 errors (10 total).
+2026-04-13 20:01:59.102 - records_manager - INFO - Received all records, processing now...
+2026-04-13 20:01:59.103 - server_metrics_manager - INFO - Server Metrics: Profiling complete, capturing final metrics...
+2026-04-13 20:01:59.103 - records_manager - INFO - Waiting 2.0s for server metrics flush period...
+2026-04-13 20:02:01.097 - records_manager - INFO - Processing records results...
+2026-04-13 20:02:01.106 - system_controller - INFO - Waiting for server metrics results...
+2026-04-13 20:02:01.106 - system_controller - INFO - Waiting for server metrics results...
+2026-04-13 20:02:01.112 - records_manager - INFO - _finalize_and_process_results completed
+2026-04-13 20:02:01.113 - system_controller - INFO - All results received, initiating shutdown
+2026-04-13 20:02:01.715 - ExporterManager - INFO - Exporting all records
+2026-04-13 20:02:01.739 - ExporterManager - INFO - Exporting console data
