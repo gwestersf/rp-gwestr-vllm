@@ -108,7 +108,7 @@ Bump `VERSION`, then run:
 ./release.sh
 ```
 
-This builds and pushes `gwesterrunpod/rp-gwestr-vllm:<version>`. Pin the version tag in your RunPod endpoint template — avoid `latest` so deployments are reproducible and rollback is straightforward.
+This builds and pushes `gwesterrunpod/rp-gwestr-vllm:<version>`. Published images are available at [hub.docker.com/repository/docker/gwesterrunpod/rp-gwestr-vllm](https://hub.docker.com/repository/docker/gwesterrunpod/rp-gwestr-vllm/general). Pin the version tag in your RunPod endpoint template — avoid `latest` so deployments are reproducible and rollback is straightforward.
 
 ---
 
