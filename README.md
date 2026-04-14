@@ -1,4 +1,4 @@
-# rp-gwestr-vllm
+# NVIDIA Dynamo with vLLM OpenAI Server
 
 [![Runpod](https://api.runpod.io/badge/gwestersf/rp-gwestr-vllm)](https://console.runpod.io/hub/gwestersf/rp-gwestr-vllm)
 
