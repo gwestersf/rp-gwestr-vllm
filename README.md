@@ -25,6 +25,17 @@ On worker startup:
 
 ---
 
+## Inference backends
+
+This project is built on [NVIDIA AI Dynamo](https://github.com/ai-dynamo/dynamo), which natively supports both **vLLM** and **TensorRT-LLM** as inference backends. The current image uses vLLM for broad model compatibility and ease of use. Swapping to TensorRT-LLM is an architectural option within the same Dynamo runtime — no change to the RunPod handler or serving infrastructure required, only the backend component and model format.
+
+| Backend | Strengths |
+|---|---|
+| **vLLM** (current) | Any Hugging Face model, fast iteration, FP16/BF16, continuous batching |
+| **TensorRT-LLM** | Maximum throughput, INT8/FP8 quantization, optimized CUDA kernels for production |
+
+---
+
 ## Environment variables
 
 | Variable | Default | Description |
