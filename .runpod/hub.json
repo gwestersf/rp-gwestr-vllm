@@ -8,8 +8,8 @@
     "runsOn": "GPU",
     "containerDiskInGb": 20,
     "gpuCount": 1,
-    "gpuIds": "BLACKWELL_48,BLACKWELL_96,ADA_48,AMPERE_48",
-    "allowedCudaVersions": ["13.2", "13.1", "13.0", "12.9"],
+    "gpuIds": "BLACKWELL_48,BLACKWELL_96",
+    "allowedCudaVersions": ["13.2", "13.1", "13.0"],
     "env": [
       {
         "key": "MODEL_PATH",
