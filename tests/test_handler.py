@@ -23,7 +23,7 @@ def h(monkeypatch):
     """Import handler with a clean environment and no side-effecting imports."""
     monkeypatch.setenv("MODEL_PATH", "/vol/models/gemma")
     monkeypatch.setenv("VLLM_PORT", "8000")
-    monkeypatch.setenv("TRITON_STARTUP_TIMEOUT", "1")
+    monkeypatch.setenv("VLLM_STARTUP_TIMEOUT", "1")
 
     sys.modules.pop("handler", None)
     mod = importlib.import_module("handler")
@@ -302,7 +302,7 @@ class TestWaitForVllm:
             h._wait_for_vllm()  # should not raise
 
     def test_raises_on_timeout(self, h, monkeypatch):
-        monkeypatch.setenv("TRITON_STARTUP_TIMEOUT", "0")
+        monkeypatch.setenv("VLLM_STARTUP_TIMEOUT", "0")
         monkeypatch.setenv("MODEL_PATH", "/vol/models/gemma")
         sys.modules.pop("handler", None)
         mod = importlib.import_module("handler")

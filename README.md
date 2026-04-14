@@ -2,15 +2,15 @@
 
 [![Runpod](https://api.runpod.io/badge/gwestersf/rp-gwestr-vllm)](https://console.runpod.io/hub/gwestersf/rp-gwestr-vllm)
 
-RunPod serverless endpoint using [vLLM](https://github.com/vllm-project/vllm) to serve any Hugging Face model with an OpenAI-compatible chat API.
+RunPod serverless endpoint that serves any Hugging Face model with an OpenAI-compatible chat API, powered by [vLLM](https://github.com/vllm-project/vllm).
 
-Built on the [NVIDIA AI Dynamo](https://github.com/ai-dynamo/dynamo) vLLM runtime image. Designed to scale from 4B to 100B+ models by adjusting env vars only — no code changes, no image rebuild.
+Designed to scale from 4B to 100B+ models by adjusting env vars — no code changes, no image rebuild.
 
 ---
 
 ## Base image
 
-Built from [ai-dynamo/dynamo](https://github.com/ai-dynamo/dynamo) `main`, which ships **vLLM 0.19.0** — the released `nvcr.io/nvidia/ai-dynamo/vllm-runtime` tags are on an older vLLM version that doesn't support Gemma 4. We build from main until the next official release catches up.
+Built from [ai-dynamo/dynamo](https://github.com/ai-dynamo/dynamo) `main`, which ships **vLLM 0.19.0**. The official `nvcr.io/nvidia/ai-dynamo/vllm-runtime` release tags ship an older vLLM version that doesn't support Gemma 4. We build from `main` until the next official release catches up.
 
 The base image is published as `gwesterrunpod/dynamo-vllm-runtime:main` and requires:
 
@@ -24,8 +24,8 @@ The base image is published as `gwesterrunpod/dynamo-vllm-runtime:main` and requ
 ## How it works
 
 On worker startup, `handler.py`:
-1. Launches `python3 -m vllm.entrypoints.openai.api_server` pointing at `MODEL_PATH`
-2. Polls `/health` until ready (up to `TRITON_STARTUP_TIMEOUT` seconds)
+1. Launches `python3 -m vllm.entrypoints.openai.api_server` pointed at `MODEL_PATH`
+2. Polls `/health` until ready (up to `VLLM_STARTUP_TIMEOUT` seconds)
 3. Forwards RunPod jobs to `/v1/chat/completions`
 
 ---
@@ -36,11 +36,11 @@ On worker startup, `handler.py`:
 |---|---|---|
 | `MODEL_PATH` | **required** | Path to model weights (e.g. `/runpod-volume/models/gemma-4-E4B-it`) |
 | `TENSOR_PARALLEL_SIZE` | `1` | GPUs per worker — set to `2` for 26B, `4`+ for 70B+ |
-| `MAX_MODEL_LEN` | `8192` | Max context window in tokens. Reduce if OOM on startup |
+| `MAX_MODEL_LEN` | `8192` | Max context window in tokens. Reduce if OOM on startup. |
 | `GPU_MEMORY_UTILIZATION` | `0.90` | Fraction of VRAM vLLM may use for KV cache |
 | `MAX_NUM_SEQS` | `4` | Max concurrent requests per worker |
 | `VLLM_PORT` | `8000` | Internal port (no need to change) |
-| `TRITON_STARTUP_TIMEOUT` | `1800` | Seconds to wait for vLLM ready — increase for large models |
+| `VLLM_STARTUP_TIMEOUT` | `1800` | Seconds to wait for vLLM to become ready — increase for large models |
 
 ### Sizing guide
 
@@ -58,7 +58,7 @@ On worker startup, `handler.py`:
 
 ### Requirements
 
-- NVIDIA driver **580+**
+- NVIDIA driver **575+**
 - Docker + [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
 
 ### RTX PRO 6000 Blackwell (48 GB VRAM)
@@ -71,7 +71,7 @@ docker run --rm --gpus all \
   -e MAX_MODEL_LEN=8192 \
   -e GPU_MEMORY_UTILIZATION=0.92 \
   -e MAX_NUM_SEQS=8 \
-  gwesterrunpod/rp-gwestr-vllm:latest
+  gwesterrunpod/rp-gwestr-vllm:0.2.8
 ```
 
 For a 26B model across **2× RTX PRO 6000**:
@@ -85,7 +85,7 @@ docker run --rm --gpus all \
   -e MAX_MODEL_LEN=8192 \
   -e GPU_MEMORY_UTILIZATION=0.90 \
   -e MAX_NUM_SEQS=4 \
-  gwesterrunpod/rp-gwestr-vllm:latest
+  gwesterrunpod/rp-gwestr-vllm:0.2.8
 ```
 
 ### Test prompt
@@ -109,15 +109,15 @@ Bump `VERSION`, then run:
 ./release.sh
 ```
 
-This builds and pushes `gwesterrunpod/rp-gwestr-vllm:<version>`. Never push `latest` — pin the version tag in your RunPod endpoint template so deployments are reproducible and rollback is a one-line change.
+This builds and pushes `gwesterrunpod/rp-gwestr-vllm:<version>`. Never use `latest` — pin the version tag in your RunPod endpoint template so deployments are reproducible and rollback is a one-line change.
 
 ---
 
 ## RunPod deployment
 
-1. Bump `VERSION`, run `./release.sh`
+1. Bump `VERSION` and run `./release.sh`
 2. Create or update a serverless endpoint:
-   - **Image:** `gwesterrunpod/rp-gwestr-vllm:0.2.0` (or current version from `VERSION`)
+   - **Image:** `gwesterrunpod/rp-gwestr-vllm:<version>`
    - **Container disk:** 20 GB minimum
    - **Network volume:** mount at `/runpod-volume` (50 GB+)
 3. Set env vars at the endpoint level — at minimum `MODEL_PATH`
@@ -129,7 +129,7 @@ This builds and pushes `gwesterrunpod/rp-gwestr-vllm:<version>`. Never push `lat
 
 ### Unit tests (no GPU required)
 
-Tests cover `handler.py` logic with all external I/O mocked (no vLLM process, no model weights).
+Tests cover `handler.py` logic with all external I/O mocked — no vLLM process, no model weights needed.
 
 ```bash
 pip install pytest pytest-asyncio
@@ -141,16 +141,14 @@ pytest tests/test_handler.py -v
 Runs against a live vLLM server. Requires:
 - NVIDIA GPU with `nvidia-smi`
 - vLLM server running and healthy at `VLLM_URL`
-- `MODEL_PATH` set to the local tokenizer path (used by aiperf)
-- [`aiperf`](https://github.com/ai-dynamo/aiperf) installed: `uv tool install aiperf --python 3.12`
+- `MODEL_PATH` pointing to the local tokenizer (used by aiperf for token counting)
+- [`aiperf`](https://github.com/ai-dynamo/aiperf) installed via `uv tool install aiperf --python 3.12`
 
 ```bash
 MODEL_PATH=/path/to/model \
 VLLM_URL=http://localhost:8000 \
 pytest tests/test_integration.py -v -s
 ```
-
-Environment variables for integration tests:
 
 | Variable | Default | Description |
 |---|---|---|

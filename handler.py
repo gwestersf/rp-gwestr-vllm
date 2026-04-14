@@ -26,7 +26,7 @@ import runpod
 VLLM_PORT = int(os.environ.get("VLLM_PORT", "8000"))
 VLLM_BASE = f"http://localhost:{VLLM_PORT}"
 MODEL_PATH = os.environ["MODEL_PATH"]
-STARTUP_TIMEOUT = int(os.environ.get("TRITON_STARTUP_TIMEOUT", "1800"))
+STARTUP_TIMEOUT = int(os.environ.get("VLLM_STARTUP_TIMEOUT", os.environ.get("TRITON_STARTUP_TIMEOUT", "1800")))
 
 _vllm_proc = None
 
