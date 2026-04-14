@@ -1,12 +1,12 @@
 # vLLM OpenAI server — serves any HF model with OpenAI-compatible chat API.
-# Requires CUDA 12.1+ (driver 530+).
-FROM nvcr.io/nvidia/ai-dynamo/vllm-runtime:1.1.0-dev.1-cuda13
+# Built on ai-dynamo/dynamo main (vLLM 0.19.0, CUDA 13.0, driver 575+).
+FROM dynamo-vllm-runtime:main
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PIP_BREAK_SYSTEM_PACKAGES=1
 
-RUN pip3 install --no-cache-dir runpod httpx \
- && pip3 install --no-cache-dir "transformers==5.5.3"
+RUN /opt/dynamo/venv/bin/pip install --no-cache-dir runpod httpx \
+ && /opt/dynamo/venv/bin/pip install --no-cache-dir "transformers==5.5.3"
 
 WORKDIR /app
 COPY handler.py .
