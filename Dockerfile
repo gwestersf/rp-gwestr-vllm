@@ -30,13 +30,22 @@ WORKDIR /app
 # handler.py stub required by RunPod Hub tooling
 COPY handler.py ./
 
-# worker-vllm source provides vLLMEngine, engine_args, tokenizer, utils
+# worker-vllm source provides vLLMEngine, tokenizer, utils
 COPY worker-vllm/src /src
 COPY handler_lb.py /src/handler_lb.py
+# Override submodule engine_args.py: ours reads MODEL_PATH, theirs only reads MODEL_NAME
+COPY engine_args.py /src/engine_args.py
 
 # /  → 'from src.utils import …' resolves to /src/utils.py
 # /src → sibling imports (engine, engine_args, tokenizer, utils, constants)
 ENV PYTHONPATH="/:/src"
+
+# HuggingFace cache on the network volume (mounted at /runpod-volume).
+# MODEL_PATH can be a HF repo ID (e.g. meta-llama/Llama-3.1-8B-Instruct);
+# vLLM will find the pre-downloaded model here instead of hitting the network.
+ENV HF_HOME="/runpod-volume/huggingface-cache/hub" \
+    HUGGINGFACE_HUB_CACHE="/runpod-volume/huggingface-cache/hub" \
+    HF_DATASETS_CACHE="/runpod-volume/huggingface-cache/datasets"
 
 # Defaults — all overridable at RunPod endpoint config time.
 ENV TENSOR_PARALLEL_SIZE=1 \
