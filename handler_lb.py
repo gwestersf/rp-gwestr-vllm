@@ -209,7 +209,11 @@ async def chat_completions(request: Request):
     except Exception as e:
         return JSONResponse({"error": {"message": str(e), "type": "invalid_request_error"}}, status_code=422)
 
-    response = await _chat_engine.create_chat_completion(req, raw_request=request)
+    try:
+        response = await _chat_engine.create_chat_completion(req, raw_request=request)
+    except Exception as e:
+        log.error("create_chat_completion error: %s\n%s", e, traceback.format_exc())
+        return JSONResponse({"error": {"message": str(e), "type": "internal_error", "traceback": traceback.format_exc()}}, status_code=500)
 
     if isinstance(response, ErrorResponse):
         return JSONResponse(response.model_dump(), status_code=response.error.code)
