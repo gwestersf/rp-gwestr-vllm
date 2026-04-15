@@ -47,6 +47,7 @@ from vllm.entrypoints.openai.completion.protocol import (
 )
 from vllm.entrypoints.openai.engine.protocol import ErrorResponse
 from vllm.entrypoints.openai.responses.protocol import ResponsesRequest, ResponsesResponse
+from vllm.entrypoints.serve.render.serving import OpenAIServingRender
 
 load_dotenv()
 
@@ -96,10 +97,26 @@ async def lifespan(app: FastAPI):
         if vllm_engine.tokenizer and hasattr(vllm_engine.tokenizer, "tokenizer"):
             chat_template = vllm_engine.tokenizer.tokenizer.chat_template
 
+        _serving_render = OpenAIServingRender(
+            model_config=llm.model_config,
+            renderer=None,
+            io_processor=None,
+            model_registry=_serving_models.registry,
+            request_logger=None,
+            chat_template=chat_template,
+            chat_template_content_format="auto",
+            trust_request_chat_template=os.getenv("TRUST_REQUEST_CHAT_TEMPLATE", "false").lower() == "true",
+            enable_auto_tools=os.getenv("ENABLE_AUTO_TOOL_CHOICE", "false").lower() == "true",
+            exclude_tools_when_tool_choice_none=os.getenv("EXCLUDE_TOOLS_WHEN_TOOL_CHOICE_NONE", "false").lower() == "true",
+            tool_parser=os.getenv("TOOL_CALL_PARSER", "") or None,
+            log_error_stack=False,
+        )
+
         _chat_engine = OpenAIServingChat(
             engine_client=llm,
             models=_serving_models,
             response_role=os.getenv("OPENAI_RESPONSE_ROLE", "assistant"),
+            openai_serving_render=_serving_render,
             request_logger=None,
             chat_template=chat_template,
             chat_template_content_format="auto",
@@ -126,6 +143,7 @@ async def lifespan(app: FastAPI):
         _responses_engine = OpenAIServingResponses(
             engine_client=llm,
             models=_serving_models,
+            openai_serving_render=_serving_render,
             request_logger=None,
             chat_template=chat_template,
             chat_template_content_format="auto",
@@ -143,6 +161,7 @@ async def lifespan(app: FastAPI):
             engine_client=llm,
             models=_serving_models,
             response_role=os.getenv("OPENAI_RESPONSE_ROLE", "assistant"),
+            openai_serving_render=_serving_render,
             request_logger=None,
             chat_template=chat_template,
             chat_template_content_format="auto",
