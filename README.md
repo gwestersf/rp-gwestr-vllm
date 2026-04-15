@@ -19,9 +19,9 @@ Scale from small to large models by adjusting environment variables — no code 
 ## How it works
 
 On worker startup:
-1. vLLM's OpenAI-compatible API server launches, loading the model from `MODEL_PATH`
-2. The handler polls `/health` until the server is ready
-3. Incoming RunPod jobs are forwarded to `/v1/chat/completions`
+1. vLLM initializes in-process via the Python API, loading the model from `MODEL_PATH`
+2. Incoming RunPod jobs are passed directly to the vLLM engine — no subprocess, no HTTP roundtrip
+3. Responses are streamed or returned as a complete result
 
 ---
 
@@ -45,8 +45,8 @@ This project is built on [NVIDIA AI Dynamo](https://github.com/ai-dynamo/dynamo)
 | `MAX_MODEL_LEN` | `8192` | Max context window in tokens. Reduce if you get OOM on startup. |
 | `GPU_MEMORY_UTILIZATION` | `0.90` | Fraction of VRAM reserved for KV cache |
 | `MAX_NUM_SEQS` | `4` | Max concurrent requests per worker |
-| `VLLM_PORT` | `8000` | Internal port vLLM listens on |
-| `VLLM_STARTUP_TIMEOUT` | `1800` | Seconds to wait for vLLM to become ready — increase for large models |
+
+Any [AsyncEngineArgs](https://docs.vllm.ai/en/latest/api/engine/async_llm_engine.html) field can be set via its uppercased env var name — for example `ENFORCE_EAGER=true`, `QUANTIZATION=fp8`, `DTYPE=bfloat16`.
 
 ### GPU sizing guide
 
@@ -71,42 +71,27 @@ This project is built on [NVIDIA AI Dynamo](https://github.com/ai-dynamo/dynamo)
 
 ## Running locally
 
-### Single GPU
-
 ```bash
 docker run --rm --gpus all \
   -v /path/to/model:/model:ro \
-  -p 8000:8000 \
   -e MODEL_PATH=/model \
   -e MAX_MODEL_LEN=8192 \
   -e GPU_MEMORY_UTILIZATION=0.92 \
   -e MAX_NUM_SEQS=8 \
-  gwesterrunpod/rp-gwestr-vllm:0.2.9
+  gwesterrunpod/rp-gwestr-vllm:0.4.0
 ```
 
-### Multi-GPU (26B+ models)
+Multi-GPU:
 
 ```bash
 docker run --rm --gpus all \
   -v /path/to/model:/model:ro \
-  -p 8000:8000 \
   -e MODEL_PATH=/model \
   -e TENSOR_PARALLEL_SIZE=2 \
   -e MAX_MODEL_LEN=8192 \
   -e GPU_MEMORY_UTILIZATION=0.90 \
   -e MAX_NUM_SEQS=4 \
-  gwesterrunpod/rp-gwestr-vllm:0.2.9
-```
-
-### Test prompt
-
-```bash
-curl http://localhost:8000/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "/model",
-    "messages": [{"role": "user", "content": "Hello!"}]
-  }'
+  gwesterrunpod/rp-gwestr-vllm:0.4.0
 ```
 
 ---
@@ -125,31 +110,51 @@ This builds and pushes `gwesterrunpod/rp-gwestr-vllm:<version>`. Published image
 
 ## Endpoint tests
 
-Send `"_run_tests": true` as the input to run a health check, chat sanity check, and aiperf performance benchmark directly inside the worker — no external tooling required.
+Send `"_run_tests": true` as the input to run a health check and chat sanity check directly inside the worker.
 
 ```json
-{
-  "input": {
-    "_run_tests": true,
-    "concurrency": 2,
-    "requests": 10
-  }
-}
+{"input": {"_run_tests": true}}
 ```
 
-`concurrency` and `requests` are optional (defaults: 2 and 10). With curl:
+With curl:
 
 ```bash
 curl -X POST https://api.runpod.ai/v2/{endpoint_id}/runsync \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $RUNPOD_API_KEY" \
-  -d '{"input": {"_run_tests": true, "concurrency": 2, "requests": 10}}'
+  -d '{"input": {"_run_tests": true}}'
 ```
 
 The response includes:
-- `health` — vLLM `/health` status
-- `chat` — single completion sanity check and response
-- `aiperf` — full aiperf metrics table (TTFT, ITL, throughput, etc.)
+- `health` — engine initialization status
+- `chat` — single completion sanity check and first 200 chars of response
+
+---
+
+## Performance benchmarking
+
+Use [aiperf](https://github.com/ai-dynamo/aiperf) against the RunPod OpenAI-compatible endpoint for realistic load testing. RunPod exposes a standard OpenAI proxy at `https://api.runpod.ai/v2/{endpoint_id}/openai`.
+
+```bash
+aiperf profile \
+  --model <model_name_or_path> \
+  --tokenizer <local_tokenizer_path_or_hf_id> \
+  --url https://api.runpod.ai/v2/{endpoint_id}/openai \
+  --endpoint /v1/chat/completions \
+  --api-key $RUNPOD_API_KEY \
+  --endpoint-type chat \
+  --concurrency 40 \
+  --request-count 1000 \
+  --streaming \
+  --public-dataset sharegpt
+```
+
+If your tokenizer is a gated HuggingFace model, set `HF_TOKEN` before running.
+
+Install aiperf locally with:
+```bash
+uv tool install aiperf --python 3.12
+```
 
 ---
 
@@ -161,23 +166,6 @@ The response includes:
 pip install pytest pytest-asyncio
 pytest tests/test_handler.py -v
 ```
-
-### Integration tests (GPU + live server required)
-
-Requires a running vLLM server and [`aiperf`](https://github.com/ai-dynamo/aiperf) (`uv tool install aiperf --python 3.12`).
-
-```bash
-MODEL_PATH=/path/to/model \
-VLLM_URL=http://localhost:8000 \
-pytest tests/test_integration.py -v -s
-```
-
-| Variable | Default | Description |
-|---|---|---|
-| `VLLM_URL` | `http://localhost:8000` | vLLM server URL |
-| `MODEL_PATH` | **required** | Local tokenizer path for aiperf token counting |
-| `AIPERF_CONCURRENCY` | `2` | Parallel workers |
-| `AIPERF_REQUESTS` | `10` | Total requests to send |
 
 ---
 

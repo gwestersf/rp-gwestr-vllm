@@ -1,15 +1,15 @@
 """Tests for handler.py — no GPU, vLLM process, or model weights required.
 
-All external I/O is mocked:
-  - vLLM HTTP calls  → httpx patched
-  - subprocess       → patched so vLLM server never spawns
+All external dependencies are mocked:
+  - vllm            → patched in sys.modules
+  - transformers    → patched in sys.modules
+  - engine_args     → patched in sys.modules
 """
 
 import importlib
-import json
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch, call
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -20,16 +20,34 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 @pytest.fixture()
 def h(monkeypatch):
-    """Import handler with a clean environment and no side-effecting imports."""
+    """Import handler with a clean environment and all heavy deps mocked."""
     monkeypatch.setenv("MODEL_PATH", "/vol/models/gemma")
-    monkeypatch.setenv("VLLM_PORT", "8000")
-    monkeypatch.setenv("VLLM_STARTUP_TIMEOUT", "1")
+
+    # Mock vllm, transformers, and engine_args so no GPU or model is needed
+    mock_vllm = MagicMock()
+    mock_transformers = MagicMock()
+    mock_engine_args_mod = MagicMock()
+    mock_engine_args_mod.get_engine_args.return_value = MagicMock()
+
+    for name in ("vllm", "transformers", "engine_args"):
+        sys.modules.pop(name, None)
+
+    monkeypatch.setitem(sys.modules, "vllm", mock_vllm)
+    monkeypatch.setitem(sys.modules, "transformers", mock_transformers)
+    monkeypatch.setitem(sys.modules, "engine_args", mock_engine_args_mod)
 
     sys.modules.pop("handler", None)
     mod = importlib.import_module("handler")
-    mod._vllm_proc = None
+
+    # Pre-wire engine and tokenizer so tests don't need to call init()
+    mod._engine = MagicMock()
+    mod._tokenizer = MagicMock()
+    mod._tokenizer.apply_chat_template.return_value = "<bos><user>hi</user><assistant>"
+
     yield mod
-    mod._vllm_proc = None
+
+    mod._engine = None
+    mod._tokenizer = None
     sys.modules.pop("handler", None)
 
 
@@ -64,7 +82,7 @@ class TestSamplingParams:
         p = h._sampling_params({"max_tokens": 1024, "temperature": 0.0})
         assert p["max_tokens"] == 1024
         assert p["temperature"] == 0.0
-        assert p["top_p"] == 1.0  # default unchanged
+        assert p["top_p"] == 1.0
 
     def test_all_base_fields_overridable(self, h):
         overrides = {
@@ -185,7 +203,7 @@ class TestHandlerStreaming:
             })
             chunks = await self._collect(result)
 
-        content_chunks = chunks[:-1]  # last is finish sentinel
+        content_chunks = chunks[:-1]
         assert [c["choices"][0]["delta"]["content"] for c in content_chunks] == tokens
 
     async def test_final_chunk_has_finish_reason_stop(self, h):
@@ -243,101 +261,17 @@ class TestHandlerStreaming:
         assert received["temperature"] == 0.5
 
 
-# ── _start_vllm ───────────────────────────────────────────────────────────────
-
-class TestStartVllm:
-    def test_popen_called(self, h):
-        with patch("subprocess.Popen") as mock_popen:
-            h._start_vllm()
-        mock_popen.assert_called_once()
-
-    def test_model_path_in_cmd(self, h):
-        with patch("subprocess.Popen") as mock_popen:
-            h._start_vllm()
-        cmd = mock_popen.call_args[0][0]
-        assert "/vol/models/gemma" in cmd
-
-    def test_port_in_cmd(self, h):
-        with patch("subprocess.Popen") as mock_popen:
-            h._start_vllm()
-        cmd = mock_popen.call_args[0][0]
-        assert "--port" in cmd
-        assert "8000" in cmd
-
-    def test_trust_remote_code_in_cmd(self, h):
-        with patch("subprocess.Popen") as mock_popen:
-            h._start_vllm()
-        cmd = mock_popen.call_args[0][0]
-        assert "--trust-remote-code" in cmd
-
-    def test_tensor_parallel_size_default(self, h):
-        with patch("subprocess.Popen") as mock_popen:
-            h._start_vllm()
-        cmd = mock_popen.call_args[0][0]
-        idx = cmd.index("--tensor-parallel-size")
-        assert cmd[idx + 1] == "1"
-
-    def test_tensor_parallel_size_override(self, h, monkeypatch):
-        monkeypatch.setenv("TENSOR_PARALLEL_SIZE", "4")
-        with patch("subprocess.Popen") as mock_popen:
-            h._start_vllm()
-        cmd = mock_popen.call_args[0][0]
-        idx = cmd.index("--tensor-parallel-size")
-        assert cmd[idx + 1] == "4"
-
-    def test_proc_assigned(self, h):
-        mock_proc = MagicMock()
-        with patch("subprocess.Popen", return_value=mock_proc):
-            h._start_vllm()
-        assert h._vllm_proc is mock_proc
-
-
-# ── _wait_for_vllm ────────────────────────────────────────────────────────────
-
-class TestWaitForVllm:
-    def test_returns_when_healthy(self, h):
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        with patch("httpx.get", return_value=mock_resp):
-            h._wait_for_vllm()  # should not raise
-
-    def test_raises_on_timeout(self, h, monkeypatch):
-        monkeypatch.setenv("VLLM_STARTUP_TIMEOUT", "0")
-        monkeypatch.setenv("MODEL_PATH", "/vol/models/gemma")
-        sys.modules.pop("handler", None)
-        mod = importlib.import_module("handler")
-        with patch("httpx.get", side_effect=ConnectionRefusedError):
-            with pytest.raises(RuntimeError, match="ready"):
-                mod._wait_for_vllm()
-
-    def test_retries_before_success(self, h):
-        fail = MagicMock(status_code=503)
-        ok = MagicMock(status_code=200)
-        with patch("httpx.get", side_effect=[ConnectionRefusedError, fail, ok]):
-            with patch("time.sleep"):
-                h._wait_for_vllm()  # should not raise
-
-
 # ── init ──────────────────────────────────────────────────────────────────────
 
 class TestInit:
-    def test_start_called_before_wait(self, h):
-        call_order = []
+    def test_engine_is_set(self, h):
+        h._engine = None
+        h._tokenizer = None
+        h.init()
+        assert h._engine is not None
 
-        with (
-            patch("handler._start_vllm", side_effect=lambda: call_order.append("start")),
-            patch("handler._wait_for_vllm", side_effect=lambda: call_order.append("wait")),
-        ):
-            h.init()
-
-        assert call_order == ["start", "wait"]
-
-    def test_both_called(self, h):
-        with (
-            patch("handler._start_vllm") as mock_start,
-            patch("handler._wait_for_vllm") as mock_wait,
-        ):
-            h.init()
-
-        mock_start.assert_called_once()
-        mock_wait.assert_called_once()
+    def test_tokenizer_is_set(self, h):
+        h._engine = None
+        h._tokenizer = None
+        h.init()
+        assert h._tokenizer is not None
