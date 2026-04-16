@@ -99,8 +99,8 @@ async def lifespan(app: FastAPI):
 
         _serving_render = OpenAIServingRender(
             model_config=llm.model_config,
-            renderer=None,
-            io_processor=None,
+            renderer=getattr(llm, 'renderer', None),
+            io_processor=getattr(llm, 'io_processor', None),
             model_registry=_serving_models.registry,
             request_logger=None,
             chat_template=chat_template,
@@ -193,6 +193,12 @@ async def ping():
     if not _is_ready or not all([_chat_engine, _completion_engine, _responses_engine, _messages_engine, _serving_models]):
         return Response(status_code=204)
     return Response(status_code=200)
+
+
+@app.get("/health")
+async def health():
+    """Standard health check alias for /ping."""
+    return await ping()
 
 
 @app.get("/v1/models")

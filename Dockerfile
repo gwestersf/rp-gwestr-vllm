@@ -23,7 +23,8 @@ RUN /opt/dynamo/venv/bin/pip install --no-cache-dir \
     fastapi \
     "uvicorn[standard]" \
     python-dotenv \
-    "transformers==5.5.3"
+    "transformers==5.5.3" \
+    "bitsandbytes>=0.48.1"
 
 WORKDIR /app
 
