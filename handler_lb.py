@@ -6,7 +6,7 @@ Runs a FastAPI/uvicorn HTTP server on port 80. RunPod's load balancer polls
   - 200: ready (accepting traffic)
 
 Exposed endpoints:
-  GET  /ping
+  GET  /ping 
   GET  /v1/models
   POST /v1/chat/completions
   POST /v1/completions
